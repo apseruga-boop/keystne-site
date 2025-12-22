@@ -1,188 +1,385 @@
 "use client";
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
-import Link from "next/link";
-import KeystneNav from "../../components/site/KeystneNav";
-import KeystneFooter from "../../components/site/KeystneFooter";
-import { CONTACT, HOME_VIDEOS } from "../../components/site/config";
+import React, { useMemo, useState, useEffect } from "react";
 
 /**
- * PAGE 2 — CONCIERGE (UPDATED)
- * Changes (ONLY what Arthur asked):
- * - Remove “Dubai” from top pill (now just CONCIERGE)
- * - Add Dubai time pill (same vibe as homepage; stable position)
- * - Remove “Back to home”
- * - Add “Compare” calculator button (salary + FX to AED, T&Cs, contact / refresh / email)
- * - Reduce spacing above option cards
- * - PROMISE box -> white background + black text; bring it up a bit
- * - Relocation wizard: origin country dropdown (no typing)
- * - Remove monthly running costs step from relocation (handled by Compare)
- * - Relocation summary: more bespoke + visa pathway guidance (high-level) + key move checklist
- * - Viewing trip finish: 10-step tick-box plan (generated from answers)
- * - Keep everything else as-is
+ * Concierge Page – single-file Next.js page (NO framer-motion, NO lucide-react)
+ * - Premium hero + concierge proposition
+ * - Relocation planner (simple logic)
+ * - Lead modal (double email confirm + validation)
+ * - Booking modal
+ * - Sticky contact dock
+ *
+ * Drop into: ./app/concierge/page.tsx
+ * Tailwind required.
  */
 
-type ConciergeFlow = "relocation" | "viewing" | null;
+// -------------------- Inline Icons (no deps) --------------------
 
-function clamp(n: number, a: number, b: number) {
-  return Math.max(a, Math.min(b, n));
+type IconProps = { className?: string; strokeWidth?: number };
+
+function Svg({
+  children,
+  className = "h-4 w-4",
+  strokeWidth = 2,
+}: {
+  children: React.ReactNode;
+  className?: string;
+  strokeWidth?: number;
+}) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      className={className}
+      stroke="currentColor"
+      strokeWidth={strokeWidth}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      {children}
+    </svg>
+  );
 }
+
+const PhoneIcon = ({ className }: IconProps) => (
+  <Svg className={className}>
+    <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.86 19.86 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.86 19.86 0 0 1 2.08 4.18 2 2 0 0 1 4.06 2h3a2 2 0 0 1 2 1.72c.12.86.3 1.7.54 2.5a2 2 0 0 1-.45 2.11L8.1 9.4a16 16 0 0 0 6.5 6.5l1.07-1.05a2 2 0 0 1 2.11-.45c.8.24 1.64.42 2.5.54A2 2 0 0 1 22 16.92z" />
+  </Svg>
+);
+
+const MessageCircleIcon = ({ className }: IconProps) => (
+  <Svg className={className}>
+    <path d="M21 11.5a8.5 8.5 0 0 1-8.5 8.5c-1.1 0-2.16-.2-3.14-.56L3 21l1.56-6.36c-.36-.98-.56-2.04-.56-3.14A8.5 8.5 0 1 1 21 11.5z" />
+  </Svg>
+);
+
+const SendIcon = ({ className }: IconProps) => (
+  <Svg className={className}>
+    <path d="M22 2 11 13" />
+    <path d="M22 2 15 22l-4-9-9-4 20-7z" />
+  </Svg>
+);
+
+const MailIcon = ({ className }: IconProps) => (
+  <Svg className={className}>
+    <path d="M4 4h16v16H4z" opacity="0" />
+    <path d="M4 6h16" />
+    <path d="M4 6l8 7 8-7" />
+    <path d="M4 18h16" opacity="0" />
+    <path d="M4 6v12h16V6" />
+  </Svg>
+);
+
+const CalendarIcon = ({ className }: IconProps) => (
+  <Svg className={className}>
+    <path d="M8 2v4" />
+    <path d="M16 2v4" />
+    <path d="M3 10h18" />
+    <path d="M5 6h14a2 2 0 0 1 2 2v14H3V8a2 2 0 0 1 2-2z" />
+  </Svg>
+);
+
+const MapPinIcon = ({ className }: IconProps) => (
+  <Svg className={className}>
+    <path d="M12 21s7-4.35 7-11a7 7 0 1 0-14 0c0 6.65 7 11 7 11z" />
+    <path d="M12 10.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z" />
+  </Svg>
+);
+
+const ChevronRightIcon = ({ className }: IconProps) => (
+  <Svg className={className}>
+    <path d="M9 18l6-6-6-6" />
+  </Svg>
+);
+
+const XIcon = ({ className }: IconProps) => (
+  <Svg className={className}>
+    <path d="M18 6 6 18" />
+    <path d="M6 6l12 12" />
+  </Svg>
+);
+
+const CheckIcon = ({ className }: IconProps) => (
+  <Svg className={className}>
+    <path d="M20 6 9 17l-5-5" />
+  </Svg>
+);
+
+const ShieldCheckIcon = ({ className }: IconProps) => (
+  <Svg className={className}>
+    <path d="M12 2 20 6v6c0 5-3.5 9.5-8 10-4.5-.5-8-5-8-10V6l8-4z" />
+    <path d="M9 12l2 2 4-4" />
+  </Svg>
+);
+
+const SparklesIcon = ({ className }: IconProps) => (
+  <Svg className={className}>
+    <path d="M12 2l1.2 4.2L17.4 7.5l-4.2 1.2L12 12l-1.2-3.3L6.6 7.5l4.2-1.3L12 2z" />
+    <path d="M19 13l.7 2.3L22 16l-2.3.7L19 19l-.7-2.3L16 16l2.3-.7L19 13z" />
+    <path d="M4 14l.7 2.3L7 17l-2.3.7L4 20l-.7-2.3L1 17l2.3-.7L4 14z" />
+  </Svg>
+);
+
+const ArrowRightIcon = ({ className }: IconProps) => (
+  <Svg className={className}>
+    <path d="M5 12h14" />
+    <path d="M13 6l6 6-6 6" />
+  </Svg>
+);
+
+// -------------------- Helpers --------------------
 
 function isValidEmail(email: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email.trim());
 }
 
-function buildMailto(args: { subject: string; body: string }) {
-  const to = CONTACT.emailArthur;
-  const cc = CONTACT.emailStuart;
-  const subject = encodeURIComponent(args.subject);
-  const body = encodeURIComponent(args.body);
-  return `mailto:${to}?cc=${cc}&subject=${subject}&body=${body}`;
+function formatPhoneHint(input: string) {
+  return input.replace(/[^0-9+\s()-]/g, "");
 }
 
-/** Simple inline icons (NO lucide-react) */
-function Icon({
-  name,
-  className = "h-4 w-4",
+// -------------------- Config --------------------
+
+const BRAND = {
+  name: "Keystne Concierge",
+  city: "Dubai, UAE",
+};
+
+const CONTACT = {
+  phoneDisplay: "+971 XX XXX XXXX",
+  phoneTel: "tel:+971XXXXXXXXX",
+  whatsappLink: "https://wa.me/971XXXXXXXXX",
+  telegramLink: "https://t.me/keystne",
+  emailPrimary: "mailto:arthur@keystne.com",
+  emailSecondary: "mailto:stuart@keystne.com",
+  wechatId: "keystne",
+};
+
+const MEDIA = {
+  heroVideo:
+    "https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4", // replace
+};
+
+const DUBAI_AREAS = [
+  "Downtown Dubai",
+  "Dubai Marina",
+  "Business Bay",
+  "Palm Jumeirah",
+  "JBR (Jumeirah Beach Residence)",
+  "JLT (Jumeirah Lake Towers)",
+  "Dubai Hills Estate",
+  "Arabian Ranches",
+  "JVC (Jumeirah Village Circle)",
+  "Dubai Creek Harbour",
+  "City Walk",
+  "Al Barsha",
+  "The Springs",
+  "Emirates Hills",
+];
+
+// -------------------- Types --------------------
+
+type Household = "Single" | "Couple" | "Family";
+type BudgetBand = "< 8k AED" | "8–15k AED" | "15–25k AED" | "25k+ AED";
+type Channel =
+  | "Call"
+  | "WhatsApp"
+  | "Telegram"
+  | "WeChat"
+  | "Email"
+  | "Book a call";
+type CallWhen = "ASAP" | "1 month" | "2 months" | "6 months";
+
+type LeadPayload = {
+  name: string;
+  email: string;
+  emailConfirm: string;
+  phone: string;
+  when: CallWhen;
+  preferredChannel: Channel;
+  message: string;
+};
+
+// -------------------- UI Primitives --------------------
+
+function Card({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="rounded-3xl border border-white/10 bg-white/5 shadow-xl backdrop-blur-xl">
+      {children}
+    </div>
+  );
+}
+
+function Button({
+  children,
+  onClick,
+  variant = "primary",
+  className = "",
+  type = "button",
+  disabled,
 }: {
-  name:
-    | "whatsapp"
-    | "phone"
-    | "telegram"
-    | "mail"
-    | "calendar"
-    | "wechat"
-    | "arrow"
-    | "check"
-    | "x"
-    | "refresh";
+  children: React.ReactNode;
+  onClick?: () => void;
+  variant?: "primary" | "ghost" | "outline";
   className?: string;
+  type?: "button" | "submit";
+  disabled?: boolean;
 }) {
-  const common = {
-    className,
-    fill: "none",
-    stroke: "currentColor",
-    strokeWidth: 2,
-  };
-  switch (name) {
-    case "arrow":
-      return (
-        <svg viewBox="0 0 24 24" {...common}>
-          <path d="M5 12h12" />
-          <path d="M13 6l6 6-6 6" />
-        </svg>
-      );
-    case "check":
-      return (
-        <svg viewBox="0 0 24 24" {...common}>
-          <path d="M20 6L9 17l-5-5" />
-        </svg>
-      );
-    case "x":
-      return (
-        <svg viewBox="0 0 24 24" {...common}>
-          <path d="M18 6L6 18" />
-          <path d="M6 6l12 12" />
-        </svg>
-      );
-    case "refresh":
-      return (
-        <svg viewBox="0 0 24 24" {...common}>
-          <path d="M21 12a9 9 0 1 1-3-6.7" />
-          <path d="M21 3v6h-6" />
-        </svg>
-      );
-    case "phone":
-      return (
-        <svg viewBox="0 0 24 24" {...common}>
-          <path d="M22 16.5v3a2 2 0 0 1-2.2 2c-9.6-.8-17-8.2-17.8-17.8A2 2 0 0 1 4 1.5h3a2 2 0 0 1 2 1.7c.1.9.3 1.8.6 2.6a2 2 0 0 1-.5 2.1L8 9c1.6 3.1 4.1 5.6 7.2 7.2l1.1-1.1a2 2 0 0 1 2.1-.5c.8.3 1.7.5 2.6.6a2 2 0 0 1 1.7 2z" />
-        </svg>
-      );
-    case "mail":
-      return (
-        <svg viewBox="0 0 24 24" {...common}>
-          <path d="M4 4h16v16H4z" />
-          <path d="M4 6l8 6 8-6" />
-        </svg>
-      );
-    case "calendar":
-      return (
-        <svg viewBox="0 0 24 24" {...common}>
-          <path d="M8 2v4" />
-          <path d="M16 2v4" />
-          <path d="M3 8h18" />
-          <path d="M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z" />
-        </svg>
-      );
-    case "telegram":
-      return (
-        <svg viewBox="0 0 24 24" {...common}>
-          <path d="M22 2L11 13" />
-          <path d="M22 2L15 22l-4-9-9-4 20-7z" />
-        </svg>
-      );
-    case "whatsapp":
-      return (
-        <svg viewBox="0 0 24 24" {...common}>
-          <path d="M20 11.5a8.5 8.5 0 0 1-12.7 7.4L4 20l1.2-3.1A8.5 8.5 0 1 1 20 11.5z" />
-          <path d="M9.5 9.5c.3 2.4 2.6 4.8 5.2 5.2" />
-        </svg>
-      );
-    case "wechat":
-      return (
-        <svg viewBox="0 0 24 24" {...common}>
-          <path d="M8.5 11.5c-3.6 0-6.5 2.1-6.5 4.7 0 1 .4 1.9 1.1 2.7L2.5 22l3.2-1.6c.8.3 1.8.5 2.8.5 3.6 0 6.5-2.1 6.5-4.7S12.1 11.5 8.5 11.5z" />
-          <path d="M15.5 2c3.6 0 6.5 2.1 6.5 4.7 0 1-.4 1.9-1.1 2.7l.6 2.9-3.2-1.6c-.8.3-1.8.5-2.8.5-3.6 0-6.5-2.1-6.5-4.7S11.9 2 15.5 2z" />
-        </svg>
-      );
-    default:
-      return null;
-  }
+  const base =
+    "inline-flex items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm transition active:scale-[0.99] disabled:opacity-60 disabled:cursor-not-allowed";
+  const styles =
+    variant === "primary"
+      ? "bg-white text-black hover:bg-white/90"
+      : variant === "outline"
+      ? "border border-white/15 bg-transparent text-white hover:bg-white/10"
+      : "bg-transparent text-white hover:bg-white/10";
+  return (
+    <button
+      type={type}
+      onClick={onClick}
+      disabled={disabled}
+      className={`${base} ${styles} ${className}`}
+    >
+      {children}
+    </button>
+  );
+}
+
+function Input({
+  label,
+  value,
+  onChange,
+  placeholder,
+  type = "text",
+  required,
+  hint,
+  right,
+  error,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+  type?: string;
+  required?: boolean;
+  hint?: string;
+  right?: React.ReactNode;
+  error?: string;
+}) {
+  return (
+    <div className="space-y-1">
+      <div className="flex items-end justify-between">
+        <label className="text-xs font-medium tracking-wide text-white/80">
+          {label} {required ? <span className="text-white/40">*</span> : null}
+        </label>
+        {hint ? (
+          <span className="text-[11px] text-white/45">{hint}</span>
+        ) : null}
+      </div>
+      <div
+        className={`flex items-center gap-2 rounded-2xl border px-3 py-2 shadow-sm backdrop-blur-xl ${
+          error
+            ? "border-red-500/40 bg-red-500/5"
+            : "border-white/10 bg-white/5"
+        }`}
+      >
+        <input
+          value={value}
+          type={type}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={placeholder}
+          className="w-full bg-transparent text-sm text-white outline-none placeholder:text-white/30"
+        />
+        {right}
+      </div>
+      {error ? (
+        <div className="text-[11px] text-red-300/90">{error}</div>
+      ) : null}
+    </div>
+  );
+}
+
+function Select({
+  label,
+  value,
+  onChange,
+  options,
+  required,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  options: string[];
+  required?: boolean;
+}) {
+  return (
+    <div className="space-y-1">
+      <label className="text-xs font-medium tracking-wide text-white/80">
+        {label} {required ? <span className="text-white/40">*</span> : null}
+      </label>
+      <div className="rounded-2xl border border-white/10 bg-white/5 px-3 py-2 shadow-sm backdrop-blur-xl">
+        <select
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className="w-full bg-transparent text-sm text-white outline-none"
+        >
+          <option value="">Select…</option>
+          {options.map((o) => (
+            <option key={o} value={o} className="text-black">
+              {o}
+            </option>
+          ))}
+        </select>
+      </div>
+    </div>
+  );
 }
 
 function Modal({
   open,
   onClose,
   title,
-  subtitle,
   children,
-  widthClass = "max-w-3xl",
+  subtitle,
 }: {
   open: boolean;
   onClose: () => void;
   title: string;
   subtitle?: string;
   children: React.ReactNode;
-  widthClass?: string;
 }) {
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open, onClose]);
+
   if (!open) return null;
+
   return (
-    <div className="fixed inset-0 z-[70] flex items-end justify-center p-4 md:items-center">
-      <button
-        aria-label="Close modal backdrop"
-        className="absolute inset-0 bg-black/45 backdrop-blur-sm"
+    <div className="fixed inset-0 z-50 flex items-end justify-center p-4 md:items-center">
+      <div
+        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
         onClick={onClose}
       />
-      <div
-        className={[
-          "relative w-full overflow-hidden rounded-[28px] border border-black/10 bg-white shadow-ks",
-          widthClass,
-        ].join(" ")}
-      >
-        <div className="flex items-start justify-between gap-4 border-b border-black/10 p-5">
+      <div className="relative w-full max-w-2xl overflow-hidden rounded-[28px] border border-white/10 bg-[#0a0a0a] text-white shadow-2xl">
+        <div className="flex items-start justify-between gap-4 border-b border-white/10 p-5">
           <div>
-            <div className="text-base font-semibold tracking-tight text-black">
-              {title}
-            </div>
+            <div className="text-base font-semibold tracking-wide">{title}</div>
             {subtitle ? (
-              <div className="mt-1 text-xs text-black/55">{subtitle}</div>
+              <div className="mt-1 text-xs text-white/65">{subtitle}</div>
             ) : null}
           </div>
           <button
             onClick={onClose}
-            className="rounded-2xl px-3 py-2 text-[12px] font-semibold text-black/70 hover:bg-black/5"
+            className="rounded-2xl p-2 text-white/70 hover:bg-white/10"
+            aria-label="Close"
           >
-            Close
+            <XIcon className="h-5 w-5" />
           </button>
         </div>
         <div className="p-5">{children}</div>
@@ -191,1790 +388,835 @@ function Modal({
   );
 }
 
-function FieldShell({
-  label,
-  hint,
-  required,
-  error,
-  children,
-}: {
-  label: string;
-  hint?: string;
-  required?: boolean;
-  error?: string;
-  children: React.ReactNode;
-}) {
+// -------------------- Sections --------------------
+
+function TopBar({ onOpenLead }: { onOpenLead: () => void }) {
   return (
-    <div className="space-y-1">
-      <div className="flex items-end justify-between gap-3">
-        <label className="text-xs font-semibold tracking-wide text-black/70">
-          {label} {required ? <span className="text-black/35">*</span> : null}
-        </label>
-        {hint ? <div className="text-[11px] text-black/45">{hint}</div> : null}
-      </div>
-      <div
-        className={[
-          "rounded-2xl border bg-white px-3 py-3 shadow-sm",
-          error ? "border-red-400/60" : "border-black/10",
-        ].join(" ")}
-      >
-        {children}
-      </div>
-      {error ? (
-        <div className="text-[11px] text-red-600/85">{error}</div>
-      ) : null}
-    </div>
-  );
-}
-
-function TextInput({
-  value,
-  onChange,
-  placeholder,
-}: {
-  value: string;
-  onChange: (v: string) => void;
-  placeholder?: string;
-}) {
-  return (
-    <input
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      placeholder={placeholder}
-      className="w-full bg-transparent text-sm text-black outline-none placeholder:text-black/30"
-    />
-  );
-}
-
-function SelectInput({
-  value,
-  onChange,
-  options,
-}: {
-  value: string;
-  onChange: (v: string) => void;
-  options: string[];
-}) {
-  return (
-    <select
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      className="w-full bg-transparent text-sm text-black outline-none"
-    >
-      <option value="">Select…</option>
-      {options.map((o) => (
-        <option key={o} value={o}>
-          {o}
-        </option>
-      ))}
-    </select>
-  );
-}
-
-function Segmented({
-  value,
-  onChange,
-  options,
-}: {
-  value: string;
-  onChange: (v: string) => void;
-  options: string[];
-}) {
-  return (
-    <div className="flex flex-wrap gap-2">
-      {options.map((o) => {
-        const active = value === o;
-        return (
-          <button
-            key={o}
-            onClick={() => onChange(o)}
-            className={[
-              "rounded-full px-3 py-2 text-[12px] font-semibold transition",
-              active
-                ? "bg-[#C8A45D] text-black"
-                : "bg-black/5 text-black/70 hover:bg-black/10",
-            ].join(" ")}
-            type="button"
-          >
-            {o}
-          </button>
-        );
-      })}
-    </div>
-  );
-}
-
-function Progress({ step, total }: { step: number; total: number }) {
-  const pct = Math.round(((step + 1) / total) * 100);
-  return (
-    <div className="space-y-2">
-      <div className="flex items-center justify-between text-[11px] text-black/50">
-        <div>
-          Step <span className="font-semibold text-black/70">{step + 1}</span>{" "}
-          of {total}
-        </div>
-        <div>{pct}%</div>
-      </div>
-      <div className="h-2 w-full overflow-hidden rounded-full bg-black/10">
-        <div
-          className="h-full rounded-full bg-[#C8A45D] transition-all"
-          style={{ width: `${pct}%` }}
-        />
-      </div>
-    </div>
-  );
-}
-
-/** Dubai time pill (stable) */
-function DubaiTimePill() {
-  const [now, setNow] = useState<Date>(() => new Date());
-  useEffect(() => {
-    const t = window.setInterval(() => setNow(new Date()), 1000);
-    return () => window.clearInterval(t);
-  }, []);
-
-  const timeText = useMemo(() => {
-    try {
-      return new Intl.DateTimeFormat("en-GB", {
-        timeZone: "Asia/Dubai",
-        weekday: "short",
-        hour: "2-digit",
-        minute: "2-digit",
-      }).format(now);
-    } catch {
-      return now.toLocaleTimeString();
-    }
-  }, [now]);
-
-  return (
-    <div className="inline-flex items-center gap-2 rounded-full border border-black/10 bg-white/90 px-4 py-2 text-[12px] font-semibold text-black shadow-ks backdrop-blur">
-      <span className="h-2 w-2 rounded-full bg-[#C8A45D]" />
-      Dubai time: <span className="text-black/75">{timeText}</span>
-    </div>
-  );
-}
-
-/** Contact dock — matches locked homepage style (white dock, gold hover) */
-function ContactDock() {
-  return (
-    <div className="fixed bottom-5 right-5 z-40 w-[240px] overflow-hidden rounded-[22px] border border-black/10 bg-white/90 shadow-ks backdrop-blur-xl">
-      <div className="p-2">
-        <a
-          className="flex items-center justify-center gap-2 rounded-2xl bg-[#C8A45D] px-3 py-3 text-[12px] font-semibold text-black hover:brightness-110"
-          href={CONTACT.whatsappLink}
-          target="_blank"
-          rel="noreferrer"
-        >
-          <Icon name="whatsapp" className="h-4 w-4" />
-          WhatsApp us
-        </a>
-
-        <div className="mt-2 grid gap-1">
-          <a
-            className="flex items-center gap-2 rounded-2xl px-3 py-2 text-[12px] font-semibold text-black/75 hover:bg-[#C8A45D] hover:text-black"
-            href={CONTACT.phoneTel}
-          >
-            <Icon name="phone" />
-            Call
-          </a>
-
-          <a
-            className="flex items-center gap-2 rounded-2xl px-3 py-2 text-[12px] font-semibold text-black/75 hover:bg-[#C8A45D] hover:text-black"
-            href={CONTACT.telegramLink}
-            target="_blank"
-            rel="noreferrer"
-          >
-            <Icon name="telegram" />
-            Telegram
-          </a>
-
-          <a
-            className="flex items-center gap-2 rounded-2xl px-3 py-2 text-[12px] font-semibold text-black/75 hover:bg-[#C8A45D] hover:text-black"
-            href={buildMailto({
-              subject: "Keystne enquiry",
-              body: "Hi Keystne team,\n\nI'd like to enquire about:\n\nName:\nPhone:\nPreferred contact time:\nDetails:\n\nThank you",
-            })}
-          >
-            <Icon name="mail" />
-            Email
-          </a>
-
-          <div className="flex items-center gap-2 rounded-2xl px-3 py-2 text-[12px] font-semibold text-black/55">
-            <Icon name="wechat" />
-            {CONTACT.wechatText || "WeChat ID: keystne"}
+    <div className="fixed left-0 right-0 top-0 z-40">
+      <div className="mx-auto max-w-6xl px-4">
+        <div className="mt-4 flex items-center justify-between rounded-3xl border border-white/10 bg-black/70 px-4 py-3 text-white shadow-lg backdrop-blur-xl">
+          <div className="flex items-center gap-3">
+            <div className="h-9 w-9 rounded-2xl bg-white/10" />
+            <div className="leading-tight">
+              <div className="text-sm font-semibold tracking-wide">
+                {BRAND.name}
+              </div>
+              <div className="text-[11px] text-white/60">
+                Relocation • Lifestyle • Setup
+              </div>
+            </div>
           </div>
-        </div>
 
-        <div className="mt-3 rounded-2xl border border-black/10 bg-black px-3 py-3">
-          <div className="text-[10px] tracking-[0.22em] text-white/60">
-            DIRECT
+          <div className="hidden items-center gap-6 text-xs text-white/70 md:flex">
+            <a className="hover:text-white" href="#scope">
+              What we do
+            </a>
+            <a className="hover:text-white" href="#how">
+              How it works
+            </a>
+            <a className="hover:text-white" href="#planner">
+              Planner
+            </a>
+            <a className="hover:text-white" href="#faq">
+              FAQ
+            </a>
           </div>
-          <div className="mt-1 text-sm font-semibold text-white">
-            {CONTACT.phoneDisplay}
-          </div>
+
+          <Button variant="ghost" onClick={onOpenLead} className="text-white">
+            Get started <ChevronRightIcon className="h-4 w-4" />
+          </Button>
         </div>
       </div>
     </div>
   );
 }
 
-/* ---------- Compare Calculator (modal) ---------- */
+function Hero({ onOpenLead }: { onOpenLead: () => void }) {
+  return (
+    <section className="relative min-h-[92vh] overflow-hidden bg-black text-white">
+      <video
+        className="absolute inset-0 h-full w-full object-cover opacity-70"
+        src={MEDIA.heroVideo}
+        autoPlay
+        muted
+        loop
+        playsInline
+      />
+      <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/35 to-[#0b0b0b]" />
 
-const COUNTRIES = [
-  "United Arab Emirates",
-  "United Kingdom",
-  "United States",
-  "Canada",
-  "Australia",
-  "New Zealand",
-  "Ireland",
-  "France",
-  "Germany",
-  "Netherlands",
-  "Belgium",
-  "Spain",
-  "Italy",
-  "Portugal",
-  "Switzerland",
-  "Sweden",
-  "Norway",
-  "Denmark",
-  "Finland",
-  "South Africa",
-  "Nigeria",
-  "Ghana",
-  "Kenya",
-  "Uganda",
-  "Rwanda",
-  "Tanzania",
-  "Ethiopia",
-  "Egypt",
-  "Morocco",
-  "Algeria",
-  "Tunisia",
-  "Turkey",
-  "Saudi Arabia",
-  "Qatar",
-  "Kuwait",
-  "Bahrain",
-  "Oman",
-  "India",
-  "Pakistan",
-  "Bangladesh",
-  "Sri Lanka",
-  "Philippines",
-  "Indonesia",
-  "Malaysia",
-  "Singapore",
-  "China",
-  "Japan",
-  "South Korea",
-  "Brazil",
-  "Mexico",
-  "Argentina",
-  "Colombia",
-];
+      <div className="relative mx-auto flex min-h-[92vh] max-w-6xl flex-col justify-end px-4 pb-14 pt-28">
+        <div className="max-w-3xl">
+          <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3 py-1 text-[11px] text-white/75">
+            <ShieldCheckIcon className="h-4 w-4" />
+            Private • Bespoke • Handled end-to-end
+          </div>
 
-const COUNTRY_TO_CURRENCY: Record<string, string> = {
-  "United Arab Emirates": "AED",
-  "United Kingdom": "GBP",
-  "United States": "USD",
-  Canada: "CAD",
-  Australia: "AUD",
-  "New Zealand": "NZD",
-  Ireland: "EUR",
-  France: "EUR",
-  Germany: "EUR",
-  Netherlands: "EUR",
-  Belgium: "EUR",
-  Spain: "EUR",
-  Italy: "EUR",
-  Portugal: "EUR",
-  Switzerland: "CHF",
-  Sweden: "SEK",
-  Norway: "NOK",
-  Denmark: "DKK",
-  Finland: "EUR",
-  "South Africa": "ZAR",
-  Nigeria: "NGN",
-  Ghana: "GHS",
-  Kenya: "KES",
-  Uganda: "UGX",
-  Rwanda: "RWF",
-  Tanzania: "TZS",
-  Ethiopia: "ETB",
-  Egypt: "EGP",
-  Morocco: "MAD",
-  Algeria: "DZD",
-  Tunisia: "TND",
-  Turkey: "TRY",
-  "Saudi Arabia": "SAR",
-  Qatar: "QAR",
-  Kuwait: "KWD",
-  Bahrain: "BHD",
-  Oman: "OMR",
-  India: "INR",
-  Pakistan: "PKR",
-  Bangladesh: "BDT",
-  "Sri Lanka": "LKR",
-  Philippines: "PHP",
-  Indonesia: "IDR",
-  Malaysia: "MYR",
-  Singapore: "SGD",
-  China: "CNY",
-  Japan: "JPY",
-  "South Korea": "KRW",
-  Brazil: "BRL",
-  Mexico: "MXN",
-  Argentina: "ARS",
-  Colombia: "COP",
-};
+          <h1 className="mt-4 text-4xl font-semibold tracking-tight md:text-6xl">
+            Dubai move, done properly.
+          </h1>
 
-function parseNumber(v: string) {
-  const n = Number(String(v || "").replace(/[^0-9.]/g, ""));
-  return Number.isFinite(n) ? n : 0;
+          <p className="mt-4 max-w-2xl text-base text-white/75 md:text-lg">
+            We plan your relocation like a concierge should — home search,
+            viewings, paperwork support, move-in setup, and the lifestyle
+            details people forget until it’s stressful.
+          </p>
+
+          <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+            <Button onClick={onOpenLead} className="px-6">
+              Get your plan <ArrowRightIcon className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => window.location.assign("#planner")}
+            >
+              Use the planner
+            </Button>
+          </div>
+
+          <div className="mt-6 grid max-w-2xl grid-cols-2 gap-3 md:grid-cols-4">
+            {[
+              { k: "Response", v: "Same day" },
+              { k: "Viewings", v: "Curated" },
+              { k: "Setup", v: "Move-in ready" },
+              { k: "Privacy", v: "Always" },
+            ].map((x) => (
+              <div
+                key={x.k}
+                className="rounded-2xl border border-white/10 bg-white/5 p-4"
+              >
+                <div className="text-[11px] text-white/55">{x.k}</div>
+                <div className="mt-1 text-sm font-semibold">{x.v}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
 }
 
-function CompareModal({
+function Scope() {
+  const items = [
+    {
+      title: "Home search & shortlisting",
+      desc: "We narrow the market quickly based on your lifestyle, commute, and budget.",
+    },
+    {
+      title: "Viewings & negotiation support",
+      desc: "Curated tours, fast comparisons, and support through offers and terms.",
+    },
+    {
+      title: "Paperwork & move-in support",
+      desc: "Guidance on the process steps so you don’t lose time or miss details.",
+    },
+    {
+      title: "Lifestyle setup",
+      desc: "Utilities, SIM, school shortlists, clinic proximity, and local essentials.",
+    },
+  ];
+
+  return (
+    <section id="scope" className="bg-[#0b0b0b] text-white">
+      <div className="mx-auto max-w-6xl px-4 py-16">
+        <div className="max-w-3xl">
+          <div className="text-[11px] tracking-[0.18em] text-white/55">
+            CONCIERGE SCOPE
+          </div>
+          <h2 className="mt-2 text-3xl font-semibold tracking-tight md:text-4xl">
+            What we do, end-to-end.
+          </h2>
+          <p className="mt-3 text-white/70">
+            This is not “send me listings and good luck.” It’s a managed
+            relocation — designed to reduce stress and wasted time.
+          </p>
+        </div>
+
+        <div className="mt-10 grid gap-4 md:grid-cols-2">
+          {items.map((i) => (
+            <Card key={i.title}>
+              <div className="p-6">
+                <div className="flex items-center gap-2 text-xs text-white/70">
+                  <SparklesIcon className="h-4 w-4" />
+                  Included
+                </div>
+                <div className="mt-2 text-xl font-semibold">{i.title}</div>
+                <div className="mt-2 text-sm text-white/70">{i.desc}</div>
+              </div>
+            </Card>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function HowItWorks({ onOpenLead }: { onOpenLead: () => void }) {
+  const steps = [
+    {
+      n: "01",
+      t: "Profile",
+      d: "We capture your needs, lifestyle, and timeline.",
+    },
+    { n: "02", t: "Curate", d: "We shortlist options that actually match." },
+    { n: "03", t: "View", d: "We plan viewings efficiently and compare fast." },
+    {
+      n: "04",
+      t: "Close",
+      d: "We support through terms, deposit, and move-in prep.",
+    },
+  ];
+
+  return (
+    <section id="how" className="bg-[#0b0b0b] text-white">
+      <div className="mx-auto max-w-6xl px-4 pb-16">
+        <div className="rounded-[32px] border border-white/10 bg-gradient-to-b from-white/5 to-white/0 p-8">
+          <div className="flex flex-col justify-between gap-6 md:flex-row md:items-end">
+            <div className="max-w-2xl">
+              <div className="text-[11px] tracking-[0.18em] text-white/55">
+                PROCESS
+              </div>
+              <h3 className="mt-2 text-2xl font-semibold tracking-tight md:text-3xl">
+                How it works (simple).
+              </h3>
+              <p className="mt-2 text-sm text-white/70">
+                You’ll always know what’s next, what we need from you, and what
+                we’re handling for you.
+              </p>
+            </div>
+            <Button variant="outline" onClick={onOpenLead}>
+              Start now <ChevronRightIcon className="h-4 w-4" />
+            </Button>
+          </div>
+
+          <div className="mt-8 grid gap-4 md:grid-cols-4">
+            {steps.map((s) => (
+              <div
+                key={s.n}
+                className="rounded-3xl border border-white/10 bg-white/5 p-5"
+              >
+                <div className="text-[11px] text-white/55">{s.n}</div>
+                <div className="mt-2 text-base font-semibold">{s.t}</div>
+                <div className="mt-2 text-sm text-white/70">{s.d}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function Planner({ onPrefill }: { onPrefill: (msg: string) => void }) {
+  const [country, setCountry] = useState("");
+  const [household, setHousehold] = useState<Household | "">("");
+  const [kids, setKids] = useState<"No" | "Yes">("No");
+  const [relocationDate, setRelocationDate] = useState("");
+  const [areaKnown, setAreaKnown] = useState<"No" | "Yes">("No");
+  const [area, setArea] = useState("");
+  const [budget, setBudget] = useState<BudgetBand | "">("");
+
+  const outputs = useMemo(() => {
+    let baseWeeks = 5;
+    if (household === "Family") baseWeeks += 2;
+    if (kids === "Yes") baseWeeks += 2;
+    if (areaKnown === "No") baseWeeks += 1;
+
+    let complexity = 1;
+    if (household === "Couple") complexity = 1.15;
+    if (household === "Family") complexity = 1.35;
+    if (kids === "Yes") complexity += 0.15;
+
+    const baseBudgetMap: Record<string, [number, number]> = {
+      "< 8k AED": [4500, 9000],
+      "8–15k AED": [7000, 14000],
+      "15–25k AED": [10000, 20000],
+      "25k+ AED": [12000, 28000],
+    };
+
+    const [min, max] =
+      budget && baseBudgetMap[budget] ? baseBudgetMap[budget] : [0, 0];
+    const estMin = Math.round(min * complexity);
+    const estMax = Math.round(max * complexity);
+
+    return { weeks: baseWeeks, estMin, estMax };
+  }, [household, kids, areaKnown, budget]);
+
+  const canContinue =
+    !!country &&
+    !!household &&
+    !!relocationDate &&
+    (areaKnown === "Yes" ? !!area : !!budget);
+
+  const prefillMessage = () => {
+    const msg = [
+      `Concierge planner request:`,
+      `Origin: ${country || "-"}`,
+      `Household: ${household || "-"}`,
+      `Kids: ${kids}`,
+      `Target date: ${relocationDate || "-"}`,
+      `Preferred area known: ${areaKnown}`,
+      `Area: ${areaKnown === "Yes" ? area || "-" : "TBD"}`,
+      `Budget band: ${areaKnown === "No" ? budget || "-" : "N/A"}`,
+      `Planner output: ~${outputs.weeks} weeks. Est. band: ${
+        outputs.estMin ? `${outputs.estMin}–${outputs.estMax} AED` : "TBD"
+      }`,
+    ].join(" | ");
+    onPrefill(msg);
+  };
+
+  return (
+    <section id="planner" className="bg-[#0b0b0b] text-white">
+      <div className="mx-auto max-w-6xl px-4 py-16">
+        <div className="max-w-3xl">
+          <div className="text-[11px] tracking-[0.18em] text-white/55">
+            PLANNER
+          </div>
+          <h2 className="mt-2 text-3xl font-semibold tracking-tight md:text-4xl">
+            Plan your move in 60 seconds.
+          </h2>
+          <p className="mt-3 text-white/70">
+            Quick inputs. You’ll get a realistic timeline and we’ll take it from
+            there.
+          </p>
+        </div>
+
+        <div className="mt-10 grid gap-6 md:grid-cols-2">
+          <Card>
+            <div className="p-6">
+              <div className="text-sm font-semibold">Your details</div>
+              <div className="mt-1 text-xs text-white/60">
+                This is a preview — we’ll confirm everything on a call.
+              </div>
+
+              <div className="mt-6 grid gap-4">
+                <Input
+                  label="Origin country"
+                  value={country}
+                  onChange={setCountry}
+                  placeholder="e.g., United Kingdom"
+                  required
+                />
+
+                <Select
+                  label="Household"
+                  value={household}
+                  onChange={(v) => setHousehold(v as Household)}
+                  options={["Single", "Couple", "Family"]}
+                  required
+                />
+
+                <Select
+                  label="Kids"
+                  value={kids}
+                  onChange={(v) => setKids(v as "No" | "Yes")}
+                  options={["No", "Yes"]}
+                />
+
+                <Input
+                  label="Target relocation date"
+                  value={relocationDate}
+                  onChange={setRelocationDate}
+                  type="date"
+                  required
+                />
+
+                <Select
+                  label="Do you know your preferred area?"
+                  value={areaKnown}
+                  onChange={(v) => {
+                    setAreaKnown(v as "No" | "Yes");
+                    setArea("");
+                    setBudget("");
+                  }}
+                  options={["No", "Yes"]}
+                />
+
+                {areaKnown === "Yes" ? (
+                  <Select
+                    label="Preferred area"
+                    value={area}
+                    onChange={setArea}
+                    options={DUBAI_AREAS}
+                    required
+                  />
+                ) : (
+                  <Select
+                    label="Monthly budget band"
+                    value={budget}
+                    onChange={(v) => setBudget(v as BudgetBand)}
+                    options={[
+                      "< 8k AED",
+                      "8–15k AED",
+                      "15–25k AED",
+                      "25k+ AED",
+                    ]}
+                    required
+                  />
+                )}
+
+                <Button
+                  onClick={prefillMessage}
+                  disabled={!canContinue}
+                  className="mt-2"
+                >
+                  Continue <ChevronRightIcon className="h-4 w-4" />
+                </Button>
+
+                <div className="text-[11px] text-white/45">
+                  Indicative only — final timeline and costs depend on inventory
+                  and your preferences.
+                </div>
+              </div>
+            </div>
+          </Card>
+
+          <div className="rounded-[28px] border border-white/10 bg-white/5 p-6">
+            <div className="flex items-center gap-2 text-xs text-white/70">
+              <CheckIcon className="h-4 w-4" />
+              Your preview
+            </div>
+
+            <div className="mt-4 rounded-3xl border border-white/10 bg-black/30 p-5">
+              <div className="text-[11px] text-white/60">
+                Estimated timeline
+              </div>
+              <div className="mt-2 text-4xl font-semibold">
+                ~{outputs.weeks} weeks
+              </div>
+              <div className="mt-2 text-sm text-white/70">
+                From profiling → shortlist → viewings → move-in setup.
+              </div>
+            </div>
+
+            <div className="mt-4 rounded-3xl border border-white/10 bg-black/30 p-5">
+              <div className="text-[11px] text-white/60">
+                Estimated support band
+              </div>
+              <div className="mt-2 text-2xl font-semibold">
+                {outputs.estMin
+                  ? `${outputs.estMin.toLocaleString()}–${outputs.estMax.toLocaleString()} AED`
+                  : "TBD"}
+              </div>
+              <div className="mt-2 text-sm text-white/70">
+                This is a placeholder band (not a quote). We confirm after a
+                short call.
+              </div>
+            </div>
+
+            <div className="mt-4 grid gap-3">
+              {[
+                "Shortlist in 48–72 hrs once profiled",
+                "Viewings planned efficiently",
+                "Move-in essentials checklist",
+                "Privacy-first communication",
+              ].map((x) => (
+                <div
+                  key={x}
+                  className="rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-white/75"
+                >
+                  {x}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function LeadModal({
   open,
   onClose,
+  prefillMessage,
+  onBook,
 }: {
   open: boolean;
   onClose: () => void;
+  prefillMessage?: string;
+  onBook: (lead: LeadPayload) => void;
 }) {
-  const [country, setCountry] = useState("United Kingdom");
-  const [currency, setCurrency] = useState("GBP");
-  const [salary, setSalary] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [fx, setFx] = useState<number | null>(null);
-  const [fxNote, setFxNote] = useState<string>("");
-
-  useEffect(() => {
-    const cur = COUNTRY_TO_CURRENCY[country] || "";
-    if (cur) setCurrency(cur);
-  }, [country]);
-
-  const salaryNum = useMemo(() => parseNumber(salary), [salary]);
-
-  const salaryAED = useMemo(() => {
-    if (!fx || !salaryNum) return null;
-    return salaryNum * fx;
-  }, [fx, salaryNum]);
-
-  const refresh = async () => {
-    setLoading(true);
-    setFx(null);
-    setFxNote("");
-
-    try {
-      // free FX endpoint (no key) — base = selected currency
-      const res = await fetch(`https://open.er-api.com/v6/latest/${currency}`);
-      const json = await res.json();
-      const rate = json?.rates?.AED;
-
-      if (!rate || !Number.isFinite(rate)) throw new Error("No AED rate");
-      setFx(rate);
-
-      const updated = json?.time_last_update_utc || "";
-      setFxNote(updated ? `FX updated: ${updated}` : "FX updated (live)");
-    } catch {
-      setFxNote("Could not fetch live FX right now — try refresh again.");
-    } finally {
-      setLoading(false);
-    }
-  };
+  const [payload, setPayload] = useState<LeadPayload>(() => ({
+    name: "",
+    email: "",
+    emailConfirm: "",
+    phone: "",
+    when: "ASAP",
+    preferredChannel: "Book a call",
+    message: prefillMessage || "",
+  }));
 
   useEffect(() => {
     if (!open) return;
-    // fetch once when opening
-    refresh();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]);
+    setPayload((p) => ({ ...p, message: prefillMessage || p.message }));
+  }, [open, prefillMessage]);
 
-  const emailBreakdown = () => {
-    const body = [
-      "KEYSTNE — COST COMPARISON (LEAD-GEN)",
-      "",
-      `Country: ${country}`,
-      `Currency: ${currency}`,
-      `Monthly salary (input): ${salary || "-"}`,
-      fx ? `FX: 1 ${currency} = ${fx} AED` : "FX: (not available)",
-      salaryAED
-        ? `Salary in AED (estimate): ${salaryAED.toFixed(0)} AED / month`
-        : "Salary in AED: —",
-      "",
-      "T&Cs:",
-      "- FX rates are indicative and can change. This is guidance, not financial advice.",
-      "- Cost-of-living varies by lifestyle, household size, and location in Dubai.",
-      "- We confirm assumptions during a call.",
-      "",
-      fxNote ? `Note: ${fxNote}` : "",
-    ].join("\n");
+  const errors = useMemo(() => {
+    const e: Record<string, string> = {};
+    if (!payload.name.trim()) e.name = "Enter your name.";
+    if (!payload.email.trim()) e.email = "Enter your email.";
+    else if (!isValidEmail(payload.email)) e.email = "Email looks incorrect.";
+    if (!payload.emailConfirm.trim()) e.emailConfirm = "Confirm your email.";
+    else if (payload.emailConfirm.trim() !== payload.email.trim())
+      e.emailConfirm = "Emails do not match.";
+    if (!payload.phone.trim()) e.phone = "Enter a phone number.";
+    return e;
+  }, [payload]);
 
-    window.location.href = buildMailto({
-      subject: "Keystne — Cost comparison breakdown",
-      body,
-    });
-  };
+  const canSubmit = Object.keys(errors).length === 0;
 
-  const contactUs = () => {
-    const body = [
-      "Hi Keystne team,",
-      "",
-      "I’d like help with relocating / comparing costs.",
-      "",
-      `Country: ${country}`,
-      `Currency: ${currency}`,
-      `Monthly salary: ${salary || "-"}`,
-      fx ? `FX used: 1 ${currency} = ${fx} AED` : "",
-      salaryAED ? `AED estimate: ${salaryAED.toFixed(0)} AED / month` : "",
-      "",
-      "Please contact me to discuss next steps.",
-    ].join("\n");
-
-    window.location.href = buildMailto({
-      subject: "Keystne — Contact request (Cost comparison)",
-      body,
-    });
+  const submit = () => {
+    if (payload.preferredChannel === "Book a call" && payload.when === "ASAP") {
+      onBook(payload);
+      return;
+    }
+    alert("Captured (prototype). Wire to CRM + notifications.");
+    onClose();
   };
 
   return (
     <Modal
       open={open}
       onClose={onClose}
-      title="Compare: your country vs Dubai"
-      subtitle="Quick salary → AED conversion with simple guidance (lead-gen)."
-      widthClass="max-w-3xl"
+      title="Get your concierge plan"
+      subtitle="We’ll contact you via your preferred channel."
     >
-      <div className="grid gap-5 md:grid-cols-2">
-        <FieldShell label="Country (where you're coming from)" required>
-          <SelectInput
-            value={country}
-            onChange={setCountry}
-            options={COUNTRIES}
-          />
-        </FieldShell>
-
-        <FieldShell
-          label="Currency"
+      <div className="grid gap-4 md:grid-cols-2">
+        <Input
+          label="Full name"
+          value={payload.name}
+          onChange={(v) => setPayload((p) => ({ ...p, name: v }))}
           required
-          hint="Auto-set from country (editable)"
-        >
-          <TextInput
-            value={currency}
-            onChange={setCurrency}
-            placeholder="e.g., GBP"
-          />
-        </FieldShell>
+          error={errors.name}
+        />
+        <Input
+          label="Phone"
+          value={payload.phone}
+          onChange={(v) =>
+            setPayload((p) => ({ ...p, phone: formatPhoneHint(v) }))
+          }
+          required
+          hint="Include country code"
+          error={errors.phone}
+        />
+
+        <Input
+          label="Email"
+          value={payload.email}
+          onChange={(v) => setPayload((p) => ({ ...p, email: v }))}
+          required
+          error={errors.email}
+          right={
+            payload.email && isValidEmail(payload.email) ? (
+              <CheckIcon className="h-4 w-4 text-white/70" />
+            ) : null
+          }
+        />
+        <Input
+          label="Confirm email"
+          value={payload.emailConfirm}
+          onChange={(v) => setPayload((p) => ({ ...p, emailConfirm: v }))}
+          required
+          error={errors.emailConfirm}
+        />
+
+        <Select
+          label="When should we contact you?"
+          value={payload.when}
+          onChange={(v) => setPayload((p) => ({ ...p, when: v as CallWhen }))}
+          options={["ASAP", "1 month", "2 months", "6 months"]}
+          required
+        />
+
+        <Select
+          label="Preferred channel"
+          value={payload.preferredChannel}
+          onChange={(v) =>
+            setPayload((p) => ({ ...p, preferredChannel: v as Channel }))
+          }
+          options={[
+            "Book a call",
+            "Call",
+            "WhatsApp",
+            "Telegram",
+            "WeChat",
+            "Email",
+          ]}
+          required
+        />
 
         <div className="md:col-span-2">
-          <FieldShell
-            label="Monthly salary (your country)"
-            required
-            hint="Numbers only"
-          >
-            <TextInput
-              value={salary}
-              onChange={setSalary}
-              placeholder="e.g., 6500"
-            />
-          </FieldShell>
+          <label className="text-xs font-medium tracking-wide text-white/80">
+            Notes (optional)
+          </label>
+          <textarea
+            value={payload.message}
+            onChange={(e) =>
+              setPayload((p) => ({ ...p, message: e.target.value }))
+            }
+            placeholder="Tell us your target move date, preferred areas, and anything important."
+            className="mt-1 h-28 w-full resize-none rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white outline-none placeholder:text-white/35"
+          />
         </div>
 
-        <div className="md:col-span-2 rounded-2xl border border-black/10 bg-black/[0.03] p-4">
-          <div className="text-[11px] tracking-[0.22em] text-black/55">
-            RESULT
+        <div className="md:col-span-2 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="text-[11px] text-white/55">
+            By submitting, you agree we can contact you about this request.
           </div>
-
-          <div className="mt-3 grid gap-3 md:grid-cols-3">
-            <div className="rounded-2xl bg-white p-4 shadow-sm">
-              <div className="text-[11px] text-black/50">FX rate</div>
-              <div className="mt-1 text-lg font-semibold text-black">
-                {fx ? `1 ${currency} = ${fx.toFixed(4)} AED` : "—"}
-              </div>
-              <div className="mt-1 text-[11px] text-black/45">
-                {fxNote || ""}
-              </div>
-            </div>
-
-            <div className="rounded-2xl bg-white p-4 shadow-sm">
-              <div className="text-[11px] text-black/50">
-                Salary in AED (estimate)
-              </div>
-              <div className="mt-1 text-lg font-semibold text-black">
-                {salaryAED ? `${salaryAED.toFixed(0)} AED / mo` : "—"}
-              </div>
-              <div className="mt-1 text-[11px] text-black/45">
-                Uses live FX when available.
-              </div>
-            </div>
-
-            <div className="rounded-2xl bg-white p-4 shadow-sm">
-              <div className="text-[11px] text-black/50">Next best step</div>
-              <div className="mt-1 text-lg font-semibold text-black">
-                Book a call
-              </div>
-              <div className="mt-1 text-[11px] text-black/45">
-                We tailor to household + lifestyle.
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-4 rounded-2xl border border-black/10 bg-white p-4 text-[12px] text-black/70">
-            <div className="font-semibold text-black">T&Cs</div>
-            <ul className="mt-2 list-disc space-y-1 pl-5">
-              <li>FX rates are indicative and can change daily.</li>
-              <li>This tool gives guidance only — not financial advice.</li>
-              <li>
-                Cost-of-living depends on lifestyle, household size and area
-                choice.
-              </li>
-              <li>We confirm assumptions during your call.</li>
-            </ul>
-          </div>
-
-          <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
-            <button
-              type="button"
-              onClick={refresh}
-              className="inline-flex items-center justify-center gap-2 rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm font-semibold text-black/70 hover:bg-black/5"
-            >
-              <Icon name="refresh" />
-              Refresh FX
-            </button>
-            <button
-              type="button"
-              onClick={contactUs}
-              className="inline-flex items-center justify-center gap-2 rounded-2xl bg-black px-4 py-3 text-sm font-semibold text-white hover:bg-black/90"
-            >
-              Contact us <Icon name="arrow" />
-            </button>
-            <button
-              type="button"
-              onClick={emailBreakdown}
-              className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#C8A45D] px-4 py-3 text-sm font-semibold text-black hover:brightness-110"
-              disabled={!salaryNum}
-            >
-              Email breakdown <Icon name="mail" />
-            </button>
-          </div>
-
-          {loading ? (
-            <div className="mt-3 text-[11px] text-black/55">
-              Fetching live FX…
-            </div>
-          ) : null}
+          <Button onClick={submit} disabled={!canSubmit}>
+            Continue <ChevronRightIcon className="h-4 w-4" />
+          </Button>
         </div>
       </div>
     </Modal>
   );
 }
 
-/* ---------- Wizard (updated relocation + viewing) ---------- */
-
-type Step = {
-  id: string;
-  title: string;
-  question: string;
-  render: (state: any, setState: (patch: any) => void) => React.ReactNode;
-  validate: (state: any) => string | null;
-};
-
-function computeRunwayWeeksRelocation(s: any) {
-  // clean logic (no scribbles / no cost math)
-  const household = s.household || "Single";
-  const kids = s.kids || "No";
-  const areaKnown = s.areaKnown || "Not sure";
-
-  let weeks = 6;
-  if (household === "Couple") weeks += 1;
-  if (household === "Family") weeks += 2;
-  if (kids === "Yes") weeks += 3;
-  if (areaKnown === "Not sure") weeks += 2;
-
-  return weeks;
-}
-
-function visaGuidance(visaDirection: string) {
-  // High-level guidance only (safe + lead-gen friendly)
-  const common = [
-    "Passport validity and entry permissions (depend on nationality)",
-    "Emirates ID setup and medical checks (where relevant)",
-    "Banking + proof of address / salary documentation",
-    "Family sponsorship pathway (if applicable)",
-  ];
-
-  if (visaDirection === "Employment visa") {
-    return [
-      "Employer-led employment visa (most common)",
-      "Timeline depends on employer onboarding and approvals",
-      ...common,
-    ];
-  }
-  if (visaDirection === "Investor visa") {
-    return [
-      "Investor / partner pathway (structure depends on investment type)",
-      "Golden Visa eligibility can apply for some profiles (case-by-case)",
-      ...common,
-    ];
-  }
-  if (visaDirection === "Already resident") {
-    return [
-      "Residency transfer / status check (depends on your current visa type)",
-      "Housing + community shortlist becomes priority",
-      ...common,
-    ];
-  }
-  return [
-    "We’ll recommend the best pathway based on your profile (high-level first)",
-    "We’ll validate requirements and documents during your call",
-    ...common,
-  ];
-}
-
-const RELOCATION_STEPS: Step[] = [
-  {
-    id: "origin",
-    title: "Origin & timeline",
-    question: "Where are you relocating from, and what’s your timeline?",
-    render: (s, setS) => (
-      <div className="grid gap-4 md:grid-cols-2">
-        <FieldShell label="Origin country" required hint="Pick from the list">
-          <SelectInput
-            value={s.originCountry}
-            onChange={(v) => setS({ originCountry: v })}
-            options={COUNTRIES}
-          />
-        </FieldShell>
-
-        <FieldShell label="Timeline" required>
-          <SelectInput
-            value={s.timeline}
-            onChange={(v) => setS({ timeline: v })}
-            options={["ASAP", "1–2 months", "3–6 months", "6+ months"]}
-          />
-        </FieldShell>
-
-        <div className="md:col-span-2">
-          <FieldShell
-            label="Visa direction"
-            hint="High-level guidance. We confirm on a call."
-            required
-          >
-            <Segmented
-              value={s.visaDirection}
-              onChange={(v) => setS({ visaDirection: v })}
-              options={[
-                "Need guidance",
-                "Employment visa",
-                "Investor visa",
-                "Already resident",
-              ]}
-            />
-          </FieldShell>
-        </div>
-      </div>
-    ),
-    validate: (s) => {
-      if (!s.originCountry) return "Please select your origin country.";
-      if (!s.timeline) return "Please select your timeline.";
-      if (!s.visaDirection) return "Please choose a visa direction.";
-      return null;
-    },
-  },
-  {
-    id: "household",
-    title: "Household",
-    question: "Tell us your household setup — so we tailor areas and the plan.",
-    render: (s, setS) => (
-      <div className="grid gap-4 md:grid-cols-2">
-        <FieldShell label="Household" required>
-          <Segmented
-            value={s.household}
-            onChange={(v) => setS({ household: v })}
-            options={["Single", "Couple", "Family"]}
-          />
-        </FieldShell>
-
-        <FieldShell label="Children" required>
-          <Segmented
-            value={s.kids}
-            onChange={(v) => setS({ kids: v })}
-            options={["No", "Yes"]}
-          />
-        </FieldShell>
-
-        <div className="md:col-span-2">
-          <FieldShell label="Lifestyle preference" required>
-            <Segmented
-              value={s.lifestyle}
-              onChange={(v) => setS({ lifestyle: v })}
-              options={["City", "Coastal", "Quiet", "Mixed"]}
-            />
-          </FieldShell>
-        </div>
-      </div>
-    ),
-    validate: (s) => {
-      if (!s.household) return "Select household type.";
-      if (!s.kids) return "Select children yes/no.";
-      if (!s.lifestyle) return "Select a lifestyle preference.";
-      return null;
-    },
-  },
-  {
-    id: "area",
-    title: "Area direction",
-    question: "Do you already have a preferred Dubai area?",
-    render: (s, setS) => (
-      <div className="grid gap-4 md:grid-cols-2">
-        <FieldShell label="Preferred area known?" required>
-          <Segmented
-            value={s.areaKnown}
-            onChange={(v) => setS({ areaKnown: v, area: "", budgetBand: "" })}
-            options={["Not sure", "Known"]}
-          />
-        </FieldShell>
-
-        {s.areaKnown === "Known" ? (
-          <FieldShell label="Select area" required>
-            <SelectInput
-              value={s.area}
-              onChange={(v) => setS({ area: v })}
-              options={[
-                "Downtown Dubai",
-                "Dubai Marina",
-                "Business Bay",
-                "Palm Jumeirah",
-                "JBR",
-                "JLT",
-                "Dubai Hills Estate",
-                "Arabian Ranches",
-                "JVC",
-                "Dubai Creek Harbour",
-                "City Walk",
-                "Al Barsha",
-              ]}
-            />
-          </FieldShell>
-        ) : (
-          <FieldShell label="Monthly housing comfort band" required>
-            <SelectInput
-              value={s.budgetBand}
-              onChange={(v) => setS({ budgetBand: v })}
-              options={["< 8k AED", "8–15k AED", "15–25k AED", "25k+ AED"]}
-            />
-          </FieldShell>
-        )}
-
-        <div className="md:col-span-2 rounded-2xl border border-black/10 bg-black/[0.03] p-4 text-sm text-black/70">
-          If you’re not sure on area, we’ll recommend 2–4 communities that match
-          your lifestyle + budget.
-        </div>
-      </div>
-    ),
-    validate: (s) => {
-      if (!s.areaKnown) return "Select whether you know your area.";
-      if (s.areaKnown === "Known" && !s.area) return "Select an area.";
-      if (s.areaKnown === "Not sure" && !s.budgetBand)
-        return "Select a budget band.";
-      return null;
-    },
-  },
-  {
-    id: "finish",
-    title: "Finish",
-    question:
-      "We’ll generate a clear relocation plan summary — tailored to you.",
-    render: (s, setS) => (
-      <div className="space-y-4">
-        <div className="rounded-2xl border border-black/10 bg-black/[0.03] p-4">
-          <div className="text-[11px] tracking-[0.22em] text-black/55">
-            YOUR PLAN
-          </div>
-          <div className="mt-2 text-sm text-black/70">
-            You’re relocating from{" "}
-            <span className="font-semibold text-black">
-              {s.originCountry || "—"}
-            </span>
-            . Based on what you selected, your suggested runway is:
-          </div>
-
-          <div className="mt-3 rounded-2xl bg-white p-4 shadow-sm">
-            <div className="text-[11px] text-black/50">Suggested runway</div>
-            <div className="mt-1 text-2xl font-semibold text-black">
-              ~{computeRunwayWeeksRelocation(s)} weeks
-            </div>
-            <div className="mt-1 text-[11px] text-black/45">
-              This is a planning estimate — we tighten it once we speak.
-            </div>
-          </div>
-
-          <div className="mt-4 rounded-2xl bg-white p-4 shadow-sm">
-            <div className="text-[11px] tracking-[0.22em] text-black/55">
-              VISA PATHWAYS (HIGH-LEVEL)
-            </div>
-            <ul className="mt-2 space-y-2 text-sm text-black/75">
-              {visaGuidance(s.visaDirection || "Need guidance").map(
-                (x: string) => (
-                  <li key={x} className="flex items-start gap-2">
-                    <span className="mt-[2px] inline-flex h-5 w-5 items-center justify-center rounded-full bg-[#C8A45D] text-black">
-                      <Icon name="check" className="h-3.5 w-3.5" />
-                    </span>
-                    <span>{x}</span>
-                  </li>
-                )
-              )}
-            </ul>
-            <div className="mt-3 text-[11px] text-black/45">
-              Note: Rules vary by nationality and change over time. We confirm
-              details on a call.
-            </div>
-          </div>
-
-          <div className="mt-4 rounded-2xl bg-white p-4 shadow-sm">
-            <div className="text-[11px] tracking-[0.22em] text-black/55">
-              WHAT YOU NEED BEFORE YOU MOVE
-            </div>
-            <ul className="mt-2 space-y-2 text-sm text-black/75">
-              {[
-                "A clean document pack: passport, photos, basic proof of income",
-                "Area shortlist aligned to your lifestyle (and schools if needed)",
-                "Housing approach: lease vs buy-first (we’ll advise)",
-                "First 30-days checklist: SIM/banking/transport/building setup",
-              ].map((x) => (
-                <li key={x} className="flex items-start gap-2">
-                  <span className="mt-[2px] inline-flex h-5 w-5 items-center justify-center rounded-full bg-black text-white">
-                    <Icon name="check" className="h-3.5 w-3.5" />
-                  </span>
-                  <span>{x}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </div>
-
-        <FieldShell label="Anything else we should know?" hint="Optional">
-          <textarea
-            value={s.notes}
-            onChange={(e) => setS({ notes: e.target.value })}
-            placeholder="e.g., schools, near metro, quiet building, short-term rental first, etc."
-            className="h-28 w-full resize-none bg-transparent text-sm text-black outline-none placeholder:text-black/30"
-          />
-        </FieldShell>
-      </div>
-    ),
-    validate: () => null,
-  },
-];
-
-const VIEWING_STEPS: Step[] = [
-  {
-    id: "budget",
-    title: "Budget & horizon",
-    question: "What’s your budget range and buying horizon?",
-    render: (s, setS) => (
-      <div className="grid gap-4 md:grid-cols-2">
-        <FieldShell label="Budget range (AED)" required>
-          <SelectInput
-            value={s.budgetRange}
-            onChange={(v) => setS({ budgetRange: v })}
-            options={["750k – 1.5M", "1.5M – 3M", "3M – 6M", "6M+"]}
-          />
-        </FieldShell>
-
-        <FieldShell label="Buying horizon" required>
-          <SelectInput
-            value={s.horizon}
-            onChange={(v) => setS({ horizon: v })}
-            options={["Now", "1–3 months", "3–6 months", "6+ months"]}
-          />
-        </FieldShell>
-
-        <div className="md:col-span-2">
-          <FieldShell label="Goal" required>
-            <Segmented
-              value={s.goal}
-              onChange={(v) => setS({ goal: v })}
-              options={["End-use", "Rental yield", "Capital growth", "Mixed"]}
-            />
-          </FieldShell>
-        </div>
-      </div>
-    ),
-    validate: (s) => {
-      if (!s.budgetRange) return "Select a budget range.";
-      if (!s.horizon) return "Select a buying horizon.";
-      if (!s.goal) return "Select a goal.";
-      return null;
-    },
-  },
-  {
-    id: "travel",
-    title: "Travel timing",
-    question: "When would you like to come to Dubai for viewings?",
-    render: (s, setS) => (
-      <div className="grid gap-4 md:grid-cols-2">
-        <FieldShell label="Travel window" required>
-          <SelectInput
-            value={s.travelWindow}
-            onChange={(v) => setS({ travelWindow: v })}
-            options={[
-              "Next 2 weeks",
-              "This month",
-              "Next 2–3 months",
-              "Not sure",
-            ]}
-          />
-        </FieldShell>
-
-        <FieldShell
-          label="Viewing intensity"
-          required
-          hint="How packed should the schedule be?"
-        >
-          <Segmented
-            value={s.intensity}
-            onChange={(v) => setS({ intensity: v })}
-            options={["Light", "Balanced", "Intensive"]}
-          />
-        </FieldShell>
-
-        <div className="md:col-span-2 rounded-2xl border border-black/10 bg-black/[0.03] p-4 text-sm text-black/70">
-          We’ll organise a curated itinerary: optional pickup, area brief, and
-          viewings that fit your pace.
-        </div>
-      </div>
-    ),
-    validate: (s) => {
-      if (!s.travelWindow) return "Select travel window.";
-      if (!s.intensity) return "Select schedule intensity.";
-      return null;
-    },
-  },
-  {
-    id: "property",
-    title: "Property direction",
-    question: "What type of property are you looking for?",
-    render: (s, setS) => (
-      <div className="grid gap-4 md:grid-cols-2">
-        <FieldShell label="Property type" required>
-          <SelectInput
-            value={s.propertyType}
-            onChange={(v) => setS({ propertyType: v })}
-            options={["Apartment", "Townhouse", "Villa", "Mixed / not sure"]}
-          />
-        </FieldShell>
-
-        <FieldShell label="Market type" required>
-          <SelectInput
-            value={s.marketType}
-            onChange={(v) => setS({ marketType: v })}
-            options={["Off-plan", "Secondary", "Both"]}
-          />
-        </FieldShell>
-
-        <div className="md:col-span-2">
-          <FieldShell label="Bedrooms (preference)" required>
-            <Segmented
-              value={s.beds}
-              onChange={(v) => setS({ beds: v })}
-              options={["Studio/1", "2", "3", "4+"]}
-            />
-          </FieldShell>
-        </div>
-      </div>
-    ),
-    validate: (s) => {
-      if (!s.propertyType) return "Select property type.";
-      if (!s.marketType) return "Select market type.";
-      if (!s.beds) return "Select bedroom preference.";
-      return null;
-    },
-  },
-  {
-    id: "areas",
-    title: "Areas",
-    question: "Do you have areas in mind, or should we recommend?",
-    render: (s, setS) => (
-      <div className="grid gap-4 md:grid-cols-2">
-        <FieldShell label="Areas known?" required>
-          <Segmented
-            value={s.areasKnown}
-            onChange={(v) => setS({ areasKnown: v, areas: "", vibe: "" })}
-            options={["Not sure", "Known"]}
-          />
-        </FieldShell>
-
-        {s.areasKnown === "Known" ? (
-          <FieldShell label="Areas" hint="Comma-separated is fine" required>
-            <TextInput
-              value={s.areas}
-              onChange={(v) => setS({ areas: v })}
-              placeholder="e.g., Marina, Downtown, Business Bay"
-            />
-          </FieldShell>
-        ) : (
-          <FieldShell label="Vibe preference" required>
-            <Segmented
-              value={s.vibe}
-              onChange={(v) => setS({ vibe: v })}
-              options={["Prime", "Waterfront", "Family", "Value"]}
-            />
-          </FieldShell>
-        )}
-
-        <div className="md:col-span-2 rounded-2xl border border-black/10 bg-black/[0.03] p-4 text-sm text-black/70">
-          We’ll shortlist options, then schedule viewings around your trip.
-        </div>
-      </div>
-    ),
-    validate: (s) => {
-      if (!s.areasKnown) return "Select whether you know areas.";
-      if (s.areasKnown === "Known" && !String(s.areas || "").trim())
-        return "Add your areas.";
-      if (s.areasKnown === "Not sure" && !s.vibe)
-        return "Select a vibe preference.";
-      return null;
-    },
-  },
-  {
-    id: "finish",
-    title: "Finish",
-    question: "Here’s your step-by-step plan (tick-box style).",
-    render: (s) => {
-      const horizon = s.horizon || "—";
-      const intensity = s.intensity || "Balanced";
-      const plan = [
-        "Intro call — confirm goals, budget and timeline",
-        "Agree shortlist criteria (areas, property type, yield vs end-use)",
-        "Build shortlist (6–10 options) aligned to your preferences",
-        "Lock viewing schedule (pace matched to your intensity)",
-        "Arrange trip logistics (optional pickup / route plan)",
-        "Conduct viewings + area brief on the ground",
-        "Shortlist final 1–3 options and compare payment plans",
-        "Offer strategy + negotiation guidance (high-level)",
-        "Paperwork checklist + timelines (high-level)",
-        `Target next step: ${horizon} horizon — we keep momentum`,
-      ];
-
-      return (
-        <div className="space-y-4">
-          <div className="rounded-2xl border border-black/10 bg-black/[0.03] p-4">
-            <div className="text-[11px] tracking-[0.22em] text-black/55">
-              YOUR VIEWING TRIP PLAN
-            </div>
-            <div className="mt-2 text-sm text-black/70">
-              You selected{" "}
-              <span className="font-semibold text-black">{intensity}</span>{" "}
-              intensity. Here’s the process we run with you:
-            </div>
-
-            <div className="mt-4 space-y-2">
-              {plan.map((x) => (
-                <div
-                  key={x}
-                  className="flex items-start gap-3 rounded-2xl border border-black/10 bg-white px-4 py-3 shadow-sm"
-                >
-                  <div className="mt-[2px] h-5 w-5 rounded-md border border-black/20 bg-white" />
-                  <div className="text-sm text-black/75">{x}</div>
-                </div>
-              ))}
-            </div>
-
-            <div className="mt-3 text-[11px] text-black/45">
-              Designed for lead-gen: quick, clear, not overwhelming.
-            </div>
-          </div>
-
-          <div className="rounded-2xl border border-black/10 bg-white p-4 shadow-sm">
-            <div className="text-[11px] tracking-[0.22em] text-black/55">
-              WHAT WE NEED FROM YOU
-            </div>
-            <div className="mt-2 text-sm text-black/70">
-              Just confirm your availability + preferred contact channel, and
-              we’ll take it from there.
-            </div>
-          </div>
-        </div>
-      );
-    },
-    validate: () => null,
-  },
-];
-
-type EmailCapture = {
-  name: string;
-  email: string;
-  email2: string;
-  phone: string;
-};
-
-function buildRelocationSummary(state: any) {
-  const runway = computeRunwayWeeksRelocation(state);
-  const lines: string[] = [];
-  lines.push("CONCIERGE — RELOCATION SUMMARY");
-  lines.push("");
-  lines.push(`Origin country: ${state.originCountry || "-"}`);
-  lines.push(`Timeline: ${state.timeline || "-"}`);
-  lines.push(`Visa direction: ${state.visaDirection || "-"}`);
-  lines.push("");
-  lines.push(`Household: ${state.household || "-"}`);
-  lines.push(`Children: ${state.kids || "-"}`);
-  lines.push(`Lifestyle: ${state.lifestyle || "-"}`);
-  lines.push("");
-  lines.push(
-    `Preferred area: ${
-      state.areaKnown === "Known" ? state.area || "-" : "Not sure"
-    }`
-  );
-  if (state.areaKnown !== "Known")
-    lines.push(`Budget band: ${state.budgetBand || "-"}`);
-  lines.push("");
-  lines.push(`Suggested runway: ~${runway} weeks`);
-  lines.push("");
-  lines.push("Visa pathways (high-level):");
-  visaGuidance(state.visaDirection || "Need guidance").forEach((v: string) =>
-    lines.push(`- ${v}`)
-  );
-  lines.push("");
-  lines.push("Key move checklist:");
-  [
-    "Document pack: passport, photos, proof of income",
-    "Area shortlist + school direction (if needed)",
-    "Housing approach: lease vs buy-first",
-    "First 30-days checklist: SIM, banking, transport, building setup",
-  ].forEach((x) => lines.push(`- ${x}`));
-  lines.push("");
-  if (state.notes?.trim()) {
-    lines.push("Notes:");
-    lines.push(state.notes.trim());
-  }
-  return lines.join("\n");
-}
-
-function buildViewingSummary(state: any) {
-  const lines: string[] = [];
-  lines.push("CONCIERGE — CURATED VIEWING TRIP SUMMARY");
-  lines.push("");
-  lines.push(`Budget range: ${state.budgetRange || "-"}`);
-  lines.push(`Buying horizon: ${state.horizon || "-"}`);
-  lines.push(`Goal: ${state.goal || "-"}`);
-  lines.push("");
-  lines.push(`Travel window: ${state.travelWindow || "-"}`);
-  lines.push(`Intensity: ${state.intensity || "-"}`);
-  lines.push("");
-  lines.push(`Property type: ${state.propertyType || "-"}`);
-  lines.push(`Market type: ${state.marketType || "-"}`);
-  lines.push(`Bedrooms: ${state.beds || "-"}`);
-  lines.push("");
-  lines.push(
-    `Areas: ${
-      state.areasKnown === "Known"
-        ? state.areas || "-"
-        : `Recommend (${state.vibe || "-"})`
-    }`
-  );
-  lines.push("");
-  lines.push("Step-by-step plan included on screen (tick-box style).");
-  lines.push("");
-  if (state.notes?.trim()) {
-    lines.push("Notes:");
-    lines.push(state.notes.trim());
-  }
-  return lines.join("\n");
-}
-
-function Wizard({
+function BookingModal({
   open,
   onClose,
-  flow,
+  lead,
 }: {
   open: boolean;
   onClose: () => void;
-  flow: ConciergeFlow;
+  lead?: LeadPayload;
 }) {
-  const steps = flow === "relocation" ? RELOCATION_STEPS : VIEWING_STEPS;
+  const [date, setDate] = useState("");
+  const [time, setTime] = useState("");
 
-  const [stepIdx, setStepIdx] = useState(0);
-  const [state, setState] = useState<any>(() => ({}));
+  const canBook = !!date && !!time;
 
-  const [emailOpen, setEmailOpen] = useState(false);
-  const [bookOpen, setBookOpen] = useState(false);
-
-  const [capture, setCapture] = useState<EmailCapture>({
-    name: "",
-    email: "",
-    email2: "",
-    phone: "",
-  });
-
-  const [callDate, setCallDate] = useState("");
-  const [callTime, setCallTime] = useState("");
-
-  const resetAll = () => {
-    setStepIdx(0);
-    setState({});
-    setEmailOpen(false);
-    setBookOpen(false);
-    setCapture({ name: "", email: "", email2: "", phone: "" });
-    setCallDate("");
-    setCallTime("");
+  const book = () => {
+    alert(
+      `Booked (prototype): ${date} ${time}\n${lead?.name} • ${lead?.email}`
+    );
+    onClose();
   };
-
-  useEffect(() => {
-    if (open) resetAll();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, flow]);
-
-  const current = steps[stepIdx];
-  const setPatch = (patch: any) => setState((p: any) => ({ ...p, ...patch }));
-
-  const err = useMemo(() => current?.validate(state) ?? null, [current, state]);
-  const canNext = !err;
-
-  const summaryText = useMemo(() => {
-    if (flow === "relocation") return buildRelocationSummary(state);
-    if (flow === "viewing") return buildViewingSummary(state);
-    return "";
-  }, [flow, state]);
-
-  const emailErrors = useMemo(() => {
-    const e: Record<string, string> = {};
-    if (!capture.name.trim()) e.name = "Add your name.";
-    if (!capture.phone.trim()) e.phone = "Add your phone (with country code).";
-    if (!capture.email.trim()) e.email = "Add your email.";
-    else if (!isValidEmail(capture.email)) e.email = "Email looks incorrect.";
-    if (!capture.email2.trim()) e.email2 = "Confirm your email.";
-    else if (capture.email2.trim() !== capture.email.trim())
-      e.email2 = "Emails do not match.";
-    return e;
-  }, [capture]);
-
-  const canEmail = Object.keys(emailErrors).length === 0;
-  const canBook = !!callDate && !!callTime && canEmail;
-
-  const sendEmail = () => {
-    const body = [
-      `Client name: ${capture.name}`,
-      `Client email: ${capture.email}`,
-      `Client phone: ${capture.phone}`,
-      "",
-      summaryText,
-    ].join("\n");
-
-    const subject =
-      flow === "relocation"
-        ? "Keystne — Concierge (Relocation) summary"
-        : "Keystne — Concierge (Curated Viewing Trip) summary";
-
-    window.location.href = buildMailto({ subject, body });
-  };
-
-  const sendBooking = () => {
-    const body = [
-      `Booking request`,
-      "",
-      `Client name: ${capture.name}`,
-      `Client email: ${capture.email}`,
-      `Client phone: ${capture.phone}`,
-      "",
-      `Preferred call: ${callDate} at ${callTime} (Dubai time)`,
-      "",
-      summaryText,
-    ].join("\n");
-
-    const subject =
-      flow === "relocation"
-        ? "Keystne — Book a call (Relocation)"
-        : "Keystne — Book a call (Viewing Trip)";
-
-    window.location.href = buildMailto({ subject, body });
-  };
-
-  const headline =
-    flow === "relocation" ? "Relocation Concierge" : "Curated Viewing Trip";
-  const subtitle =
-    flow === "relocation"
-      ? "A guided relocation plan — area shortlist + onboarding support."
-      : "We organise your Dubai visit — shortlist + viewings + a clear process to buy with confidence.";
-
-  // tiny smooth transition (not “scribbly”)
-  const key = `${flow}-${stepIdx}`;
-  const contentRef = useRef<HTMLDivElement | null>(null);
-  useEffect(() => {
-    const el = contentRef.current;
-    if (!el) return;
-    el.classList.remove("opacity-100", "translate-y-0");
-    el.classList.add("opacity-0", "translate-y-2");
-    const t = window.setTimeout(() => {
-      el.classList.remove("opacity-0", "translate-y-2");
-      el.classList.add("opacity-100", "translate-y-0");
-    }, 10);
-    return () => window.clearTimeout(t);
-  }, [key]);
 
   return (
-    <>
-      <Modal
-        open={open}
-        onClose={() => {
-          onClose();
-          resetAll();
-        }}
-        title={headline}
-        subtitle={subtitle}
-        widthClass="max-w-4xl"
-      >
-        <div className="grid gap-6 md:grid-cols-[1.2fr_0.8fr]">
-          <div className="space-y-5">
-            <Progress step={stepIdx} total={steps.length} />
+    <Modal
+      open={open}
+      onClose={onClose}
+      title="Schedule your call"
+      subtitle="Pick a time that suits you — we’ll confirm."
+    >
+      <div className="grid gap-4 md:grid-cols-2">
+        <Input
+          label="Preferred date"
+          value={date}
+          onChange={setDate}
+          type="date"
+          required
+        />
+        <Input
+          label="Preferred time"
+          value={time}
+          onChange={setTime}
+          type="time"
+          required
+        />
 
-            <div className="rounded-[24px] border border-black/10 bg-white p-5 shadow-sm">
-              <div className="text-[11px] tracking-[0.22em] text-black/55">
-                {current.title.toUpperCase()}
-              </div>
-              <div className="mt-2 text-xl font-semibold text-black">
-                {current.question}
-              </div>
-
-              <div
-                ref={contentRef}
-                className="mt-5 transition-all duration-300 opacity-100 translate-y-0"
-                key={key}
-              >
-                {current.render(state, setPatch)}
-              </div>
-
-              {err ? (
-                <div className="mt-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-                  {err}
-                </div>
-              ) : null}
-
-              <div className="mt-6 flex items-center justify-between gap-3">
-                <button
-                  type="button"
-                  onClick={() => setStepIdx((i) => Math.max(0, i - 1))}
-                  className="rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm font-semibold text-black/70 hover:bg-black/5"
-                  disabled={stepIdx === 0}
-                >
-                  Back
-                </button>
-
-                {stepIdx < steps.length - 1 ? (
-                  <button
-                    type="button"
-                    onClick={() =>
-                      canNext &&
-                      setStepIdx((i) => Math.min(steps.length - 1, i + 1))
-                    }
-                    className={[
-                      "inline-flex items-center justify-center gap-2 rounded-2xl px-5 py-3 text-sm font-semibold transition",
-                      canNext
-                        ? "bg-[#C8A45D] text-black hover:brightness-110"
-                        : "bg-black/10 text-black/35 cursor-not-allowed",
-                    ].join(" ")}
-                    disabled={!canNext}
-                  >
-                    Next <Icon name="arrow" />
-                  </button>
-                ) : (
-                  <div className="flex flex-col items-end gap-2 sm:flex-row sm:items-center">
-                    <button
-                      type="button"
-                      onClick={() => setEmailOpen(true)}
-                      className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#C8A45D] px-5 py-3 text-sm font-semibold text-black hover:brightness-110"
-                    >
-                      Email this summary <Icon name="mail" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setBookOpen(true)}
-                      className="inline-flex items-center justify-center gap-2 rounded-2xl border border-black/10 bg-white px-5 py-3 text-sm font-semibold text-black/70 hover:bg-black/5"
-                    >
-                      Book a call <Icon name="calendar" />
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-
-          <div className="space-y-4">
-            <div className="rounded-[24px] border border-black/10 bg-black p-5 text-white shadow-sm">
-              <div className="text-[11px] tracking-[0.22em] text-white/55">
-                LIVE SUMMARY
-              </div>
-              <div className="mt-3 whitespace-pre-wrap text-sm text-white/85">
-                {summaryText ||
-                  "Start answering questions to see your plan here."}
-              </div>
-            </div>
-
-            <div className="rounded-[24px] border border-black/10 bg-white p-5 shadow-sm">
-              <div className="text-[11px] tracking-[0.22em] text-black/55">
-                WHY THIS WORKS
-              </div>
-              <div className="mt-2 text-sm text-black/70">
-                You get a clear plan instantly. We get the context we need to
-                tailor the next step — without wasting time.
-              </div>
-            </div>
+        <div className="md:col-span-2 rounded-2xl border border-white/10 bg-white/5 p-4">
+          <div className="text-xs text-white/70">Confirm details</div>
+          <div className="mt-2 text-sm text-white/85">
+            {lead?.name} • {lead?.email} • {lead?.phone}
           </div>
         </div>
-      </Modal>
 
-      <Modal
-        open={emailOpen}
-        onClose={() => setEmailOpen(false)}
-        title="Send your summary"
-        subtitle="We’ll receive your details + the summary via email (lead-gen)."
-        widthClass="max-w-2xl"
-      >
-        <div className="grid gap-4 md:grid-cols-2">
-          <FieldShell label="Full name" required error={emailErrors.name}>
-            <TextInput
-              value={capture.name}
-              onChange={(v) => setCapture((p) => ({ ...p, name: v }))}
-              placeholder="Your name"
-            />
-          </FieldShell>
-
-          <FieldShell
-            label="Phone (with country code)"
-            required
-            error={emailErrors.phone}
-          >
-            <TextInput
-              value={capture.phone}
-              onChange={(v) => setCapture((p) => ({ ...p, phone: v }))}
-              placeholder="+44… / +971…"
-            />
-          </FieldShell>
-
-          <FieldShell label="Email" required error={emailErrors.email}>
-            <TextInput
-              value={capture.email}
-              onChange={(v) => setCapture((p) => ({ ...p, email: v }))}
-              placeholder="name@email.com"
-            />
-          </FieldShell>
-
-          <FieldShell label="Confirm email" required error={emailErrors.email2}>
-            <TextInput
-              value={capture.email2}
-              onChange={(v) => setCapture((p) => ({ ...p, email2: v }))}
-              placeholder="Repeat email"
-            />
-          </FieldShell>
-
-          <div className="md:col-span-2 flex items-center justify-end gap-3">
-            <button
-              type="button"
-              onClick={() => setEmailOpen(false)}
-              className="rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm font-semibold text-black/70 hover:bg-black/5"
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              onClick={sendEmail}
-              disabled={!canEmail}
-              className={[
-                "inline-flex items-center justify-center gap-2 rounded-2xl px-5 py-3 text-sm font-semibold transition",
-                canEmail
-                  ? "bg-[#C8A45D] text-black hover:brightness-110"
-                  : "bg-black/10 text-black/35 cursor-not-allowed",
-              ].join(" ")}
-            >
-              Open email <Icon name="arrow" />
-            </button>
-          </div>
+        <div className="md:col-span-2 flex items-center justify-end">
+          <Button onClick={book} disabled={!canBook}>
+            Confirm booking <CalendarIcon className="h-4 w-4" />
+          </Button>
         </div>
-      </Modal>
-
-      <Modal
-        open={bookOpen}
-        onClose={() => setBookOpen(false)}
-        title="Book a call"
-        subtitle="Pick a time — we’ll confirm on email."
-        widthClass="max-w-2xl"
-      >
-        <div className="grid gap-4 md:grid-cols-2">
-          <FieldShell label="Full name" required error={emailErrors.name}>
-            <TextInput
-              value={capture.name}
-              onChange={(v) => setCapture((p) => ({ ...p, name: v }))}
-              placeholder="Your name"
-            />
-          </FieldShell>
-
-          <FieldShell
-            label="Phone (with country code)"
-            required
-            error={emailErrors.phone}
-          >
-            <TextInput
-              value={capture.phone}
-              onChange={(v) => setCapture((p) => ({ ...p, phone: v }))}
-              placeholder="+44… / +971…"
-            />
-          </FieldShell>
-
-          <FieldShell label="Email" required error={emailErrors.email}>
-            <TextInput
-              value={capture.email}
-              onChange={(v) => setCapture((p) => ({ ...p, email: v }))}
-              placeholder="name@email.com"
-            />
-          </FieldShell>
-
-          <FieldShell label="Confirm email" required error={emailErrors.email2}>
-            <TextInput
-              value={capture.email2}
-              onChange={(v) => setCapture((p) => ({ ...p, email2: v }))}
-              placeholder="Repeat email"
-            />
-          </FieldShell>
-
-          <FieldShell label="Preferred date (Dubai time)" required>
-            <input
-              value={callDate}
-              onChange={(e) => setCallDate(e.target.value)}
-              type="date"
-              className="w-full bg-transparent text-sm text-black outline-none"
-            />
-          </FieldShell>
-
-          <FieldShell label="Preferred time (Dubai time)" required>
-            <input
-              value={callTime}
-              onChange={(e) => setCallTime(e.target.value)}
-              type="time"
-              className="w-full bg-transparent text-sm text-black outline-none"
-            />
-          </FieldShell>
-
-          <div className="md:col-span-2 flex items-center justify-end gap-3">
-            <button
-              type="button"
-              onClick={() => setBookOpen(false)}
-              className="rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm font-semibold text-black/70 hover:bg-black/5"
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              onClick={sendBooking}
-              disabled={!canBook}
-              className={[
-                "inline-flex items-center justify-center gap-2 rounded-2xl px-5 py-3 text-sm font-semibold transition",
-                canBook
-                  ? "bg-[#C8A45D] text-black hover:brightness-110"
-                  : "bg-black/10 text-black/35 cursor-not-allowed",
-              ].join(" ")}
-            >
-              Open booking email <Icon name="arrow" />
-            </button>
-          </div>
-        </div>
-      </Modal>
-    </>
+      </div>
+    </Modal>
   );
 }
 
-/* ---------- Page ---------- */
-
-export default function ConciergePage() {
-  // NAV hide-on-scroll-down (page-only)
-  const [navHidden, setNavHidden] = useState(false);
-  const lastY = useRef(0);
-
-  // Wizard open state
-  const [flow, setFlow] = useState<ConciergeFlow>(null);
-  const wizardOpen = flow !== null;
-
-  // Compare modal
-  const [compareOpen, setCompareOpen] = useState(false);
-
-  useEffect(() => {
-    const onScroll = () => {
-      const y = window.scrollY || 0;
-      const delta = y - lastY.current;
-      if (delta > 10) setNavHidden(true);
-      if (delta < -10) setNavHidden(false);
-      lastY.current = y;
-    };
-
-    lastY.current = window.scrollY || 0;
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
-
+function ContactDock({ onLead }: { onLead: () => void }) {
   return (
-    <div className="min-h-screen bg-white text-black">
-      {/* Wrapper to hide/show nav on scroll direction */}
-      <div
-        className={[
-          "fixed left-0 right-0 top-0 z-50 transition-all duration-300",
-          navHidden
-            ? "-translate-y-28 opacity-0 pointer-events-none"
-            : "translate-y-0 opacity-100",
-        ].join(" ")}
-      >
-        <KeystneNav />
+    <div className="fixed bottom-5 right-5 z-40 flex flex-col gap-2">
+      <div className="rounded-[22px] border border-white/10 bg-white/80 p-2 text-black shadow-lg backdrop-blur-xl">
+        <a
+          href={CONTACT.phoneTel}
+          className="flex items-center gap-2 rounded-2xl px-3 py-2 text-sm hover:bg-black/5"
+        >
+          <PhoneIcon className="h-4 w-4" />
+          Call
+        </a>
+        <a
+          href={CONTACT.whatsappLink}
+          className="flex items-center gap-2 rounded-2xl px-3 py-2 text-sm hover:bg-black/5"
+          target="_blank"
+          rel="noreferrer"
+        >
+          <MessageCircleIcon className="h-4 w-4" />
+          WhatsApp
+        </a>
+        <a
+          href={CONTACT.telegramLink}
+          className="flex items-center gap-2 rounded-2xl px-3 py-2 text-sm hover:bg-black/5"
+          target="_blank"
+          rel="noreferrer"
+        >
+          <SendIcon className="h-4 w-4" />
+          Telegram
+        </a>
+        <button
+          onClick={onLead}
+          className="flex w-full items-center gap-2 rounded-2xl px-3 py-2 text-left text-sm hover:bg-black/5"
+        >
+          <CalendarIcon className="h-4 w-4" />
+          Book a call
+        </button>
+        <a
+          href={CONTACT.emailPrimary}
+          className="flex items-center gap-2 rounded-2xl px-3 py-2 text-sm hover:bg-black/5"
+        >
+          <MailIcon className="h-4 w-4" />
+          Email
+        </a>
+        <div className="px-3 py-2 text-[11px] text-black/55">
+          WeChat:{" "}
+          <span className="font-medium text-black/70">{CONTACT.wechatId}</span>
+        </div>
       </div>
 
-      {/* HERO (video stays) */}
-      <section className="relative min-h-[70vh] overflow-hidden">
-        <video
-          className="absolute inset-0 h-full w-full object-cover opacity-85"
-          src={HOME_VIDEOS.hero}
-          autoPlay
-          muted
-          loop
-          playsInline
-        />
-        <div className="absolute inset-0 bg-gradient-to-b from-black/65 via-black/25 to-white" />
+      <div className="rounded-[22px] border border-white/10 bg-black px-4 py-3 text-white shadow-lg">
+        <div className="text-[11px] text-white/70">Direct</div>
+        <div className="text-sm font-semibold">{CONTACT.phoneDisplay}</div>
+      </div>
+    </div>
+  );
+}
 
-        <div className="relative mx-auto max-w-6xl px-4 pb-12 pt-28">
-          <div className="max-w-3xl">
-            {/* Removed DUBAI */}
-            <div className="text-[11px] tracking-[0.22em] text-white/80">
-              CONCIERGE
-            </div>
+function FAQ() {
+  const faqs = [
+    {
+      q: "How fast can you start?",
+      a: "Same day. We’ll profile your needs and start curating options immediately.",
+    },
+    {
+      q: "Do you handle school planning?",
+      a: "Yes — we’ll shortlist based on location, commute, and your preferences.",
+    },
+    {
+      q: "Is the planner a quote?",
+      a: "No. It’s an indicative band to set expectations. Final details come after a quick call.",
+    },
+    {
+      q: "How do we communicate?",
+      a: "Whatever you prefer — WhatsApp, call, email, Telegram, WeChat, or a scheduled call.",
+    },
+  ];
 
-            <h1 className="mt-3 text-4xl font-semibold tracking-tight text-white md:text-6xl">
-              Concierge, done properly.
-            </h1>
-
-            <p className="mt-5 text-base text-white/85 md:text-lg">
-              Two ways we support you: relocate seamlessly, or fly in for a
-              curated viewing trip and invest with clarity.
-            </p>
-
-            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-              {/* Buttons: Relocation / Viewing / Compare (no Back Home) */}
-              <button
-                onClick={() => setFlow("relocation")}
-                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#C8A45D] px-6 py-4 text-sm font-semibold text-black hover:brightness-110"
-              >
-                Relocation concierge <Icon name="arrow" />
-              </button>
-
-              <button
-                onClick={() => setFlow("viewing")}
-                className="inline-flex items-center justify-center gap-2 rounded-2xl border border-white/30 bg-white/10 px-6 py-4 text-sm font-semibold text-white hover:bg-white/15"
-              >
-                Curated viewing trip <Icon name="arrow" />
-              </button>
-
-              <button
-                onClick={() => setCompareOpen(true)}
-                className="inline-flex items-center justify-center gap-2 rounded-2xl border border-white/30 bg-white/10 px-6 py-4 text-sm font-semibold text-white hover:bg-white/15"
-              >
-                Compare <Icon name="arrow" />
-              </button>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Dubai time pill — stable position (same vibe) */}
-      <section className="bg-white">
-        <div className="mx-auto max-w-6xl px-4">
-          <div className="-mt-6 flex justify-center">
-            <DubaiTimePill />
-          </div>
-        </div>
-      </section>
-
-      {/* BODY — light premium */}
-      <section className="bg-white">
-        <div className="mx-auto max-w-6xl px-4 py-12">
-          <div className="text-[11px] tracking-[0.22em] text-black/55">
-            CHOOSE A PATH
-          </div>
+  return (
+    <section id="faq" className="bg-[#0b0b0b] text-white">
+      <div className="mx-auto max-w-6xl px-4 py-16">
+        <div className="max-w-3xl">
+          <div className="text-[11px] tracking-[0.18em] text-white/55">FAQ</div>
           <h2 className="mt-2 text-3xl font-semibold tracking-tight md:text-4xl">
-            Pick what you need — we’ll do the rest.
+            Quick answers.
           </h2>
-          <p className="mt-3 max-w-3xl text-sm text-black/65">
-            We keep the questions simple (lead-gen), then generate a clear
-            summary you can email to yourself and use to book a call.
-          </p>
+        </div>
 
-          {/* Reduced spacing here */}
-          <div className="mt-6 grid gap-4 md:grid-cols-2">
-            <button
-              onClick={() => setFlow("relocation")}
-              className="group relative overflow-hidden rounded-[28px] border border-black/10 bg-white text-left shadow-ks transition hover:-translate-y-1"
+        <div className="mt-10 grid gap-4 md:grid-cols-2">
+          {faqs.map((f) => (
+            <div
+              key={f.q}
+              className="rounded-3xl border border-white/10 bg-white/5 p-6"
             >
-              <div className="absolute inset-0 bg-gradient-to-br from-black/[0.02] via-transparent to-[#C8A45D]/10" />
-              <div className="relative p-7">
-                <div className="text-[11px] tracking-[0.22em] text-black/55">
-                  OPTION 01
-                </div>
-                <div className="mt-2 text-2xl font-semibold text-black">
-                  Relocation concierge
-                </div>
-                <div className="mt-3 text-sm text-black/70">
-                  A guided plan: visa direction, area shortlist, and a smooth
-                  move-in flow — handled personally.
-                </div>
+              <div className="text-base font-semibold">{f.q}</div>
+              <div className="mt-2 text-sm text-white/70">{f.a}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
 
-                <div className="mt-6 inline-flex items-center gap-2 rounded-full bg-black px-4 py-2 text-[12px] font-semibold text-white group-hover:bg-[#C8A45D] group-hover:text-black">
-                  Start <Icon name="arrow" className="h-4 w-4" />
-                </div>
-              </div>
-            </button>
-
-            <button
-              onClick={() => setFlow("viewing")}
-              className="group relative overflow-hidden rounded-[28px] border border-black/10 bg-white text-left shadow-ks transition hover:-translate-y-1"
-            >
-              <div className="absolute inset-0 bg-gradient-to-br from-black/[0.02] via-transparent to-[#C8A45D]/10" />
-              <div className="relative p-7">
-                <div className="text-[11px] tracking-[0.22em] text-black/55">
-                  OPTION 02
-                </div>
-                <div className="mt-2 text-2xl font-semibold text-black">
-                  Curated viewing trip
-                </div>
-                <div className="mt-3 text-sm text-black/70">
-                  You fly in — we organise shortlist + viewings + next steps to
-                  buy with confidence.
-                </div>
-
-                <div className="mt-6 inline-flex items-center gap-2 rounded-full bg-black px-4 py-2 text-[12px] font-semibold text-white group-hover:bg-[#C8A45D] group-hover:text-black">
-                  Start <Icon name="arrow" className="h-4 w-4" />
-                </div>
-              </div>
-            </button>
+function Footer() {
+  return (
+    <footer className="bg-[#070707] text-white">
+      <div className="mx-auto max-w-6xl px-4 py-12">
+        <div className="grid gap-8 md:grid-cols-2">
+          <div>
+            <div className="text-lg font-semibold tracking-wide">
+              {BRAND.name}
+            </div>
+            <div className="mt-2 max-w-md text-sm text-white/65">
+              Premium relocation concierge in Dubai — curated support, private
+              comms, and a simple process.
+            </div>
           </div>
-
-          {/* PROMISE — now white + black text, pulled up slightly */}
-          <div className="mt-8 rounded-[28px] border border-black/10 bg-white p-7 text-black shadow-sm">
-            <div className="text-[11px] tracking-[0.22em] text-black/55">
-              PROMISE
+          <div className="grid gap-3 text-sm text-white/70">
+            <div className="flex items-center gap-2">
+              <MapPinIcon className="h-4 w-4" /> {BRAND.city}
             </div>
-            <div className="mt-2 text-2xl font-semibold">
-              We keep it premium. We keep it personal.
+            <div className="flex items-center gap-2">
+              <PhoneIcon className="h-4 w-4" /> {CONTACT.phoneDisplay}
             </div>
-            <div className="mt-3 max-w-3xl text-sm text-black/70">
-              This is designed to be quick, not “boring form-filling”. You
-              answer a few guided prompts, then you get a clean summary + an
-              easy next step.
+            <div className="flex items-center gap-2">
+              <MailIcon className="h-4 w-4" /> arthur@keystne.com •
+              stuart@keystne.com
             </div>
           </div>
         </div>
-      </section>
+        <div className="mt-10 text-[11px] text-white/45">
+          © {new Date().getFullYear()} {BRAND.name}. All rights reserved.
+        </div>
+      </div>
+    </footer>
+  );
+}
 
-      <KeystneFooter />
-      <ContactDock />
+// -------------------- Page --------------------
 
-      <Wizard open={wizardOpen} flow={flow} onClose={() => setFlow(null)} />
-      <CompareModal open={compareOpen} onClose={() => setCompareOpen(false)} />
+export default function ConciergePage() {
+  const [leadOpen, setLeadOpen] = useState(false);
+  const [bookingOpen, setBookingOpen] = useState(false);
+  const [prefillMsg, setPrefillMsg] = useState<string | undefined>(undefined);
+  const [pendingLead, setPendingLead] = useState<LeadPayload | undefined>(
+    undefined
+  );
+
+  const openLead = (msg?: string) => {
+    setPrefillMsg(msg);
+    setLeadOpen(true);
+  };
+
+  const onBook = (lead: LeadPayload) => {
+    setPendingLead(lead);
+    setLeadOpen(false);
+    setBookingOpen(true);
+  };
+
+  return (
+    <div className="min-h-screen bg-[#0b0b0b]">
+      <TopBar onOpenLead={() => openLead()} />
+      <Hero onOpenLead={() => openLead()} />
+
+      <Scope />
+      <HowItWorks onOpenLead={() => openLead()} />
+      <Planner onPrefill={(msg) => openLead(msg)} />
+      <FAQ />
+      <Footer />
+
+      <ContactDock onLead={() => openLead()} />
+
+      <LeadModal
+        open={leadOpen}
+        onClose={() => setLeadOpen(false)}
+        prefillMessage={prefillMsg}
+        onBook={onBook}
+      />
+
+      <BookingModal
+        open={bookingOpen}
+        onClose={() => setBookingOpen(false)}
+        lead={pendingLead}
+      />
     </div>
   );
 }
