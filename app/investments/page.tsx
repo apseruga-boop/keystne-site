@@ -7,25 +7,13 @@ import { CONTACT } from "../../components/site/config";
 
 /**
  * INVESTMENTS PAGE — "Invest with clarity."
- * - White background
- * - Top nav pill forced to white, text black, hover gold
- * - Premium investment calculator:
- *   1) Deposit (AED)
- *   2) Deposit % (min 10%)
- *   3) Desired community
- *   4) Strategy toggle: Long-term vs Airbnb
- * - Animated graph:
- *   - Shows projected monthly net income trend (illustrative)
- *   - Airbnb view overlays tourism season bands (high season) + higher volatility
- * - Lead-gen contact CTA + modal
- * - Clear T&Cs / disclaimers (not financial advice)
- *
- * Notes:
- * - Figures are illustrative placeholders (because live data requires API + sources).
- * - Structure + styling match the premium Keystne style used on your other pages.
+ * Changes requested (ONLY):
+ * 1) Move the calculator to the top (right under the intro text).
+ * 2) Results/graph + interpretation remain below (so user picks calculator first, then sees it working below).
+ * 3) Disclaimer/T&Cs: remove the “box card” styling and present as plain black/white text (outside a box).
+ * 4) Ensure “Get a shortlist” email goes to Arthur + Stuart (handled via CONTACT.emailArthur + CC CONTACT.emailStuart).
  */
 
-/** -------------------- Small helpers -------------------- */
 function clamp(n: number, min: number, max: number) {
   return Math.max(min, Math.min(max, n));
 }
@@ -121,6 +109,7 @@ function Icon({
 }
 
 function buildMailto(args: { subject: string; body: string }) {
+  // Ensures to Arthur + CC Stuart
   const to = CONTACT.emailArthur;
   const cc = CONTACT.emailStuart;
   const subject = encodeURIComponent(args.subject);
@@ -128,7 +117,7 @@ function buildMailto(args: { subject: string; body: string }) {
   return `mailto:${to}?cc=${cc}&subject=${subject}&body=${body}`;
 }
 
-/** -------------------- Contact dock (same style as other pages) -------------------- */
+/** -------------------- Contact dock -------------------- */
 function ContactDock() {
   return (
     <div className="fixed bottom-5 right-5 z-40 w-[240px] overflow-hidden rounded-[22px] border border-black/10 bg-white/90 shadow-ks backdrop-blur-xl">
@@ -187,7 +176,7 @@ function ContactDock() {
   );
 }
 
-/** -------------------- Contact modal (for lead-gen) -------------------- */
+/** -------------------- Contact modal -------------------- */
 function ContactModal({
   open,
   onClose,
@@ -419,10 +408,9 @@ type Community = {
   name: string;
   region: string;
   tag: string;
-  // illustrative assumptions for projections (NOT advice)
-  longTermYieldPct: number; // annual net yield (rough)
-  airbnbYieldPct: number; // annual net yield (rough)
-  airbnbSeasonalityBoost: number; // how spiky it gets
+  longTermYieldPct: number;
+  airbnbYieldPct: number;
+  airbnbSeasonalityBoost: number;
 };
 
 const COMMUNITIES: Community[] = [
@@ -527,8 +515,9 @@ const COMMUNITIES: Community[] = [
   },
 ];
 
-/** -------------------- Animated chart (SVG) -------------------- */
+/** -------------------- Chart -------------------- */
 type SeriesPoint = { month: string; value: number };
+
 function buildSeries(args: {
   estProperty: number;
   strategy: "long_term" | "airbnb";
@@ -548,37 +537,29 @@ function buildSeries(args: {
     "Nov",
     "Dec",
   ];
-
-  // base monthly net income from annual net yield %
   const annualYield =
     args.strategy === "airbnb"
       ? args.community.airbnbYieldPct
       : args.community.longTermYieldPct;
   const baseMonthly = (args.estProperty * (annualYield / 100)) / 12;
 
-  // seasonality curve (illustrative; high season in Dubai tends to be Nov–Mar)
   const highSeason = new Set(["Nov", "Dec", "Jan", "Feb", "Mar"]);
   const shoulder = new Set(["Apr", "Oct"]);
 
-  const series: SeriesPoint[] = months.map((m) => {
+  return months.map((m) => {
     if (args.strategy === "long_term") {
-      // smoother: slight variation only
       const drift = m === "Jan" ? 0.98 : m === "Dec" ? 1.02 : 1.0;
       return { month: m, value: baseMonthly * drift };
     }
 
-    // airbnb: more spiky with high-season uplift
     let mult = 1.0;
     if (highSeason.has(m)) mult = 1.0 * args.community.airbnbSeasonalityBoost;
     if (shoulder.has(m)) mult = 1.08;
-    if (m === "Jun" || m === "Jul" || m === "Aug") mult = 0.82; // hotter months, slower (illustrative)
+    if (m === "Jun" || m === "Jul" || m === "Aug") mult = 0.82;
 
-    // add a gentle ramp to feel “growth over time” on the graph
     const ramp = 0.96 + (months.indexOf(m) / 11) * 0.08;
     return { month: m, value: baseMonthly * mult * ramp };
   });
-
-  return series;
 }
 
 function LineChart({
@@ -588,15 +569,12 @@ function LineChart({
   series: SeriesPoint[];
   mode: "long_term" | "airbnb";
 }) {
-  const ref = useRef<SVGPathElement | null>(null);
   const [draw, setDraw] = useState(0);
 
   useEffect(() => {
-    // animate line draw
     let raf = 0;
     const start = performance.now();
     const dur = 700;
-
     const tick = (t: number) => {
       const p = clamp((t - start) / dur, 0, 1);
       setDraw(p);
@@ -624,16 +602,13 @@ function LineChart({
   const d = series
     .map((p, i) => `${i === 0 ? "M" : "L"} ${x(i)} ${y(p.value)}`)
     .join(" ");
-
-  // clip animation
   const clipW = padX + (w - padX * 2) * draw;
 
-  // tourism “high season” overlay bands for Airbnb
   const highBands =
     mode === "airbnb"
       ? [
           { from: 10, to: 11 }, // Nov-Dec
-          { from: 0, to: 2 }, // Jan-Mar (0..2)
+          { from: 0, to: 2 }, // Jan-Mar
         ]
       : [];
 
@@ -658,7 +633,6 @@ function LineChart({
 
       <div className="mt-4 overflow-x-auto">
         <svg width={w} height={h} className="min-w-[820px]">
-          {/* grid */}
           <g opacity={0.2} stroke="black">
             {[0, 1, 2, 3].map((i) => (
               <line
@@ -671,7 +645,6 @@ function LineChart({
             ))}
           </g>
 
-          {/* high-season overlays for airbnb */}
           {highBands.map((b, idx) => {
             const x1 = x(b.from);
             const x2 = x(b.to);
@@ -689,7 +662,6 @@ function LineChart({
             );
           })}
 
-          {/* axes labels */}
           <g fill="rgba(0,0,0,0.6)" fontSize={11} fontWeight={600}>
             <text x={padX} y={h - 8}>
               Jan
@@ -708,14 +680,11 @@ function LineChart({
             </text>
           </g>
 
-          {/* animated path clip */}
           <clipPath id="clipLine">
             <rect x={0} y={0} width={clipW} height={h} />
           </clipPath>
 
-          {/* line */}
           <path
-            ref={ref}
             d={d}
             fill="none"
             stroke="black"
@@ -724,7 +693,6 @@ function LineChart({
             strokeLinecap="round"
           />
 
-          {/* points */}
           <g clipPath="url(#clipLine)">
             {series.map((p, i) => (
               <circle
@@ -750,9 +718,9 @@ function LineChart({
 
 /** -------------------- Page -------------------- */
 export default function InvestmentsPage() {
-  // Nav hide on scroll (same behaviour you liked on other pages)
   const [navHidden, setNavHidden] = useState(false);
   const lastY = useRef(0);
+
   useEffect(() => {
     const onScroll = () => {
       const y = window.scrollY || 0;
@@ -766,9 +734,8 @@ export default function InvestmentsPage() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  // Calculator state
   const [depositAED, setDepositAED] = useState<number>(300_000);
-  const [depositPct, setDepositPct] = useState<number>(10); // min 10%
+  const [depositPct, setDepositPct] = useState<number>(10);
   const [communityId, setCommunityId] = useState<string>(COMMUNITIES[0].id);
   const [strategy, setStrategy] = useState<"long_term" | "airbnb">("long_term");
 
@@ -782,9 +749,7 @@ export default function InvestmentsPage() {
     return depositAED / pct;
   }, [depositAED, depositPct]);
 
-  // “What you can get” quick bands
   const estRange = useMemo(() => {
-    // give a gentle band to feel realistic without claiming precision
     const low = estProperty * 0.92;
     const high = estProperty * 1.06;
     return { low, high };
@@ -795,7 +760,6 @@ export default function InvestmentsPage() {
     [estProperty, strategy, community]
   );
 
-  // derived monthly net figure
   const estMonthly = useMemo(() => {
     const avg = series.reduce((a, b) => a + b.value, 0) / (series.length || 1);
     return avg;
@@ -805,7 +769,6 @@ export default function InvestmentsPage() {
 
   return (
     <div className="min-h-screen bg-white text-black">
-      {/* Force NAV pill to white + black text + gold hover (same as you requested) */}
       <style jsx global>{`
         .ks-nav-white {
           background: #ffffff !important;
@@ -848,7 +811,7 @@ export default function InvestmentsPage() {
 
       {/* Hero */}
       <section className="bg-white">
-        <div className="mx-auto max-w-6xl px-4 pt-28 pb-8">
+        <div className="mx-auto max-w-6xl px-4 pt-28 pb-6">
           <div className="text-[11px] tracking-[0.22em] text-black/55">
             INVESTMENTS
           </div>
@@ -865,8 +828,8 @@ export default function InvestmentsPage() {
       {/* Main */}
       <section className="bg-white">
         <div className="mx-auto max-w-6xl px-4 pb-14">
-          <div className="grid gap-5 lg:grid-cols-[1.05fr_0.95fr]">
-            {/* LEFT: Calculator */}
+          <div className="grid gap-5">
+            {/* 1) CALCULATOR MOVED TO TOP (only layout change) */}
             <div className="rounded-[28px] border border-black/10 bg-white shadow-ks overflow-hidden">
               <div className="border-b border-black/10 px-6 py-5">
                 <div className="text-[11px] tracking-[0.22em] text-black/55">
@@ -882,7 +845,7 @@ export default function InvestmentsPage() {
               </div>
 
               <div className="p-6">
-                <div className="grid gap-4 md:grid-cols-2">
+                <div className="grid gap-4 lg:grid-cols-2">
                   {/* Deposit */}
                   <div className="rounded-2xl border border-black/10 bg-white p-4 shadow-sm">
                     <div className="flex items-start justify-between gap-3">
@@ -984,7 +947,7 @@ export default function InvestmentsPage() {
                 </div>
 
                 {/* Community + Strategy */}
-                <div className="mt-5 grid gap-4 md:grid-cols-2">
+                <div className="mt-5 grid gap-4 lg:grid-cols-2">
                   <div className="rounded-2xl border border-black/10 bg-white p-4 shadow-sm">
                     <div className="text-[11px] font-semibold text-black/60">
                       Desired community
@@ -1088,7 +1051,7 @@ export default function InvestmentsPage() {
                   </button>
                 </div>
 
-                {/* Disclaimer */}
+                {/* Small note (kept) */}
                 <div className="mt-5 rounded-[24px] border border-black/10 bg-white p-4">
                   <div className="flex items-start gap-2 text-[12px] text-black/65">
                     <span className="mt-[2px] inline-flex h-5 w-5 items-center justify-center rounded-full bg-[#C8A45D] text-black">
@@ -1107,126 +1070,122 @@ export default function InvestmentsPage() {
               </div>
             </div>
 
-            {/* RIGHT: Graph + quick comparisons */}
-            <div className="space-y-5">
-              <LineChart series={series} mode={strategy} />
+            {/* 2) RESULTS BELOW (chart + interpretation) */}
+            <LineChart series={series} mode={strategy} />
 
-              <div className="rounded-[28px] border border-black/10 bg-white shadow-ks overflow-hidden">
-                <div className="border-b border-black/10 px-6 py-5">
-                  <div className="text-[11px] tracking-[0.22em] text-black/55">
-                    WHAT THIS MEANS
-                  </div>
-                  <div className="mt-2 text-lg font-semibold text-black">
-                    Quick interpretation
-                  </div>
+            <div className="rounded-[28px] border border-black/10 bg-white shadow-ks overflow-hidden">
+              <div className="border-b border-black/10 px-6 py-5">
+                <div className="text-[11px] tracking-[0.22em] text-black/55">
+                  WHAT THIS MEANS
                 </div>
-                <div className="p-6">
-                  <div className="grid gap-3">
-                    <div className="flex items-start gap-3 rounded-2xl border border-black/10 bg-white p-4">
-                      <span className="mt-[2px] inline-flex h-6 w-6 items-center justify-center rounded-full bg-black text-white">
-                        <Icon name="check" className="h-4 w-4" />
-                      </span>
-                      <div>
-                        <div className="text-sm font-semibold text-black">
-                          Deposit → buying power
-                        </div>
-                        <div className="mt-1 text-[12px] text-black/65">
-                          At {fmtPct(depositPct)}, your deposit of{" "}
-                          <span className="font-semibold">
-                            {fmtAED(depositAED)}
-                          </span>{" "}
-                          models an estimated property value around{" "}
-                          <span className="font-semibold">
-                            {fmtAED(estProperty)}
-                          </span>
-                          .
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="flex items-start gap-3 rounded-2xl border border-black/10 bg-white p-4">
-                      <span className="mt-[2px] inline-flex h-6 w-6 items-center justify-center rounded-full bg-[#C8A45D] text-black">
-                        <Icon name="check" className="h-4 w-4" />
-                      </span>
-                      <div>
-                        <div className="text-sm font-semibold text-black">
-                          Long-term vs Airbnb
-                        </div>
-                        <div className="mt-1 text-[12px] text-black/65">
-                          Long-term tends to be steadier. Airbnb may lift during
-                          high-tourism months (gold bands) but can swing more
-                          through the year.
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="flex items-start gap-3 rounded-2xl border border-black/10 bg-white p-4">
-                      <span className="mt-[2px] inline-flex h-6 w-6 items-center justify-center rounded-full bg-black text-white">
-                        <Icon name="check" className="h-4 w-4" />
-                      </span>
-                      <div>
-                        <div className="text-sm font-semibold text-black">
-                          Next step (premium)
-                        </div>
-                        <div className="mt-1 text-[12px] text-black/65">
-                          We translate this into a real plan: building
-                          shortlist, fees, vacancy assumptions, furnishing costs
-                          (Airbnb), and a clean “go/no-go” recommendation.
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-black/10 bg-black/[0.02] p-4">
-                    <div className="text-[12px] text-black/65">
-                      Want us to validate this with real comparables for{" "}
-                      <span className="font-semibold">{community.name}</span>?
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setContactOpen(true)}
-                      className="inline-flex items-center gap-2 rounded-2xl bg-black px-4 py-3 text-[12px] font-semibold text-white hover:bg-black/90"
-                    >
-                      Get a shortlist <Icon name="arrow" />
-                    </button>
-                  </div>
+                <div className="mt-2 text-lg font-semibold text-black">
+                  Quick interpretation
                 </div>
               </div>
+              <div className="p-6">
+                <div className="grid gap-3">
+                  <div className="flex items-start gap-3 rounded-2xl border border-black/10 bg-white p-4">
+                    <span className="mt-[2px] inline-flex h-6 w-6 items-center justify-center rounded-full bg-black text-white">
+                      <Icon name="check" className="h-4 w-4" />
+                    </span>
+                    <div>
+                      <div className="text-sm font-semibold text-black">
+                        Deposit → buying power
+                      </div>
+                      <div className="mt-1 text-[12px] text-black/65">
+                        At {fmtPct(depositPct)}, your deposit of{" "}
+                        <span className="font-semibold">
+                          {fmtAED(depositAED)}
+                        </span>{" "}
+                        models an estimated property value around{" "}
+                        <span className="font-semibold">
+                          {fmtAED(estProperty)}
+                        </span>
+                        .
+                      </div>
+                    </div>
+                  </div>
 
-              {/* T&Cs */}
-              <div className="rounded-[28px] border border-black/10 bg-white shadow-ks overflow-hidden">
-                <div className="border-b border-black/10 px-6 py-5">
-                  <div className="text-[11px] tracking-[0.22em] text-black/55">
-                    T&Cs
+                  <div className="flex items-start gap-3 rounded-2xl border border-black/10 bg-white p-4">
+                    <span className="mt-[2px] inline-flex h-6 w-6 items-center justify-center rounded-full bg-[#C8A45D] text-black">
+                      <Icon name="check" className="h-4 w-4" />
+                    </span>
+                    <div>
+                      <div className="text-sm font-semibold text-black">
+                        Long-term vs Airbnb
+                      </div>
+                      <div className="mt-1 text-[12px] text-black/65">
+                        Long-term tends to be steadier. Airbnb may lift during
+                        high-tourism months (gold bands) but can swing more
+                        through the year.
+                      </div>
+                    </div>
                   </div>
-                  <div className="mt-2 text-lg font-semibold text-black">
-                    Disclaimer
+
+                  <div className="flex items-start gap-3 rounded-2xl border border-black/10 bg-white p-4">
+                    <span className="mt-[2px] inline-flex h-6 w-6 items-center justify-center rounded-full bg-black text-white">
+                      <Icon name="check" className="h-4 w-4" />
+                    </span>
+                    <div>
+                      <div className="text-sm font-semibold text-black">
+                        Next step (premium)
+                      </div>
+                      <div className="mt-1 text-[12px] text-black/65">
+                        We translate this into a real plan: building shortlist,
+                        fees, vacancy assumptions, furnishing costs (Airbnb),
+                        and a clean “go/no-go” recommendation.
+                      </div>
+                    </div>
                   </div>
                 </div>
-                <div className="p-6 text-[12px] text-black/65 leading-relaxed">
-                  <p>
-                    This tool provides{" "}
-                    <span className="font-semibold text-black">
-                      illustrative projections
-                    </span>{" "}
-                    only. It does not constitute financial, legal, tax, or
-                    investment advice. Actual outcomes vary based on property
-                    type, building quality, fees, financing, market conditions,
-                    vacancy, maintenance, and regulatory changes.
-                  </p>
-                  <p className="mt-3">
-                    Airbnb / short-let projections are indicative and may be
-                    affected by tourism cycles, platform fees, seasonality,
-                    community rules, building policies, and licensing
-                    requirements.
-                  </p>
-                  <p className="mt-3">
-                    By using this page, you agree that Keystne is not
-                    responsible for decisions made based on these estimates.
-                    Please consult licensed professionals for financial and
-                    legal guidance.
-                  </p>
+
+                <div className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-black/10 bg-black/[0.02] p-4">
+                  <div className="text-[12px] text-black/65">
+                    Want us to validate this with real comparables for{" "}
+                    <span className="font-semibold">{community.name}</span>?
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setContactOpen(true)}
+                    className="inline-flex items-center gap-2 rounded-2xl bg-black px-4 py-3 text-[12px] font-semibold text-white hover:bg-black/90"
+                  >
+                    Get a shortlist <Icon name="arrow" />
+                  </button>
                 </div>
+              </div>
+            </div>
+
+            {/* 3) DISCLAIMER OUTSIDE A BOX (plain text) */}
+            <div className="pt-2">
+              <div className="text-[11px] tracking-[0.22em] text-black/55">
+                DISCLAIMER
+              </div>
+              <div className="mt-2 text-lg font-semibold text-black">
+                Terms & conditions
+              </div>
+
+              <div className="mt-3 max-w-4xl text-[12px] leading-relaxed text-black/70">
+                <p>
+                  This tool provides{" "}
+                  <span className="font-semibold text-black">
+                    illustrative projections
+                  </span>{" "}
+                  only. It does not constitute financial, legal, tax, or
+                  investment advice. Actual outcomes vary based on property
+                  type, building quality, fees, financing, market conditions,
+                  vacancy, maintenance, and regulatory changes.
+                </p>
+                <p className="mt-3">
+                  Airbnb / short-let projections are indicative and may be
+                  affected by tourism cycles, platform fees, seasonality,
+                  community rules, building policies, and licensing
+                  requirements.
+                </p>
+                <p className="mt-3">
+                  By using this page, you agree that Keystne is not responsible
+                  for decisions made based on these estimates. Please consult
+                  licensed professionals for financial and legal guidance.
+                </p>
               </div>
             </div>
           </div>
