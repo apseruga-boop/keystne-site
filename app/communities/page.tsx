@@ -7,14 +7,12 @@ import KeystneFooter from "../../components/site/KeystneFooter";
 import { CONTACT } from "../../components/site/config";
 
 /**
- * PAGE — DISCOVER COMMUNITIES (REDO — minimal changes only)
- * Changes you asked (ONLY):
- * 1) Right side: revert to the original simple tiles panel style (and add MORE communities)
- * 2) Map must show (adds a no-key fallback embed map, so something always renders)
- * 3) Summary must be at the BOTTOM of the map (not overlaying the top)
- * 4) Contact dock: return to original size/style (same as your concierge page dock)
- * 5) Top nav: transparent + black text; hover gold (via scoped global CSS wrapper)
- * 6) Do not change anything else
+ * ONLY CHANGES IN THIS VERSION:
+ * 1) Top nav pill/box is WHITE (instead of grey), text stays black, hover gold
+ * 2) “Contact us” now opens the contact pop-up form (modal) (you said it already exists — this ensures it shows)
+ * 3) Communities list (right panel) scrolls all the way down (uses viewport-based max height + proper padding)
+ *
+ * Everything else is left as-is.
  */
 
 /** -------------------- Icons (no lucide-react) -------------------- */
@@ -107,7 +105,7 @@ function buildMailto(args: { subject: string; body: string }) {
   return `mailto:${to}?cc=${cc}&subject=${subject}&body=${body}`;
 }
 
-/** -------------------- Contact dock (original size/style) -------------------- */
+/** -------------------- Contact dock (unchanged) -------------------- */
 function ContactDock() {
   return (
     <div className="fixed bottom-5 right-5 z-40 w-[240px] overflow-hidden rounded-[22px] border border-black/10 bg-white/90 shadow-ks backdrop-blur-xl">
@@ -146,10 +144,8 @@ function ContactDock() {
             <Icon name="mail" /> Email
           </a>
 
-          {/* (Original dock had WeChat line — keep as-is if your config has it) */}
           {CONTACT.wechatText ? (
             <div className="flex items-center gap-2 rounded-2xl px-3 py-2 text-[12px] font-semibold text-black/55">
-              {/* no icon needed; keep clean */}
               {CONTACT.wechatText}
             </div>
           ) : null}
@@ -168,7 +164,211 @@ function ContactDock() {
   );
 }
 
-/** -------------------- Communities (expanded list) -------------------- */
+/** -------------------- Contact modal (pop-up) -------------------- */
+function ContactModal({
+  open,
+  onClose,
+  defaultCommunity,
+}: {
+  open: boolean;
+  onClose: () => void;
+  defaultCommunity: string;
+}) {
+  const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
+  const [preferred, setPreferred] = useState<
+    "WhatsApp" | "Call" | "Telegram" | "Email"
+  >("WhatsApp");
+  const [message, setMessage] = useState("");
+
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open, onClose]);
+
+  useEffect(() => {
+    if (!open) return;
+    // Keep community context fresh when re-opened
+    setMessage((m) => m || `I’m interested in ${defaultCommunity}.`);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, defaultCommunity]);
+
+  if (!open) return null;
+
+  const subject = `Keystne — Contact request (${defaultCommunity})`;
+  const body = [
+    `Hi Keystne team,`,
+    ``,
+    `Community: ${defaultCommunity}`,
+    `Preferred contact: ${preferred}`,
+    ``,
+    `Name: ${name || "-"}`,
+    `Phone: ${phone || "-"}`,
+    `Email: ${email || "-"}`,
+    ``,
+    `Message:`,
+    `${message || "-"}`,
+    ``,
+    `Thank you`,
+  ].join("\n");
+
+  return (
+    <div className="fixed inset-0 z-[60]">
+      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
+      <div className="absolute inset-0 flex items-center justify-center p-4">
+        <div className="w-full max-w-[720px] overflow-hidden rounded-[28px] border border-black/10 bg-white shadow-ks">
+          <div className="flex items-center justify-between border-b border-black/10 px-6 py-4">
+            <div>
+              <div className="text-[11px] tracking-[0.22em] text-black/55">
+                CONTACT
+              </div>
+              <div className="mt-1 text-xl font-semibold text-black">
+                Contact Keystne
+              </div>
+              <div className="mt-1 text-sm text-black/60">
+                Community: {defaultCommunity}
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={onClose}
+              className="inline-flex items-center justify-center rounded-2xl border border-black/10 bg-white px-3 py-2 text-[12px] font-semibold text-black/70 hover:bg-black/5"
+            >
+              <Icon name="x" className="h-4 w-4" />
+            </button>
+          </div>
+
+          <div className="grid gap-4 p-6 md:grid-cols-2">
+            <div className="rounded-2xl border border-black/10 p-4">
+              <label className="text-[11px] font-semibold text-black/60">
+                Full name
+              </label>
+              <input
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="mt-2 w-full rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm outline-none focus:border-black/20"
+                placeholder="Your name"
+              />
+
+              <div className="mt-4 grid gap-3 md:grid-cols-2">
+                <div>
+                  <label className="text-[11px] font-semibold text-black/60">
+                    Phone
+                  </label>
+                  <input
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    className="mt-2 w-full rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm outline-none focus:border-black/20"
+                    placeholder="+971..."
+                  />
+                </div>
+                <div>
+                  <label className="text-[11px] font-semibold text-black/60">
+                    Email
+                  </label>
+                  <input
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="mt-2 w-full rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm outline-none focus:border-black/20"
+                    placeholder="you@email.com"
+                  />
+                </div>
+              </div>
+
+              <div className="mt-4">
+                <label className="text-[11px] font-semibold text-black/60">
+                  Preferred contact method
+                </label>
+                <div className="mt-2 grid grid-cols-2 gap-2">
+                  {(["WhatsApp", "Call", "Telegram", "Email"] as const).map(
+                    (x) => (
+                      <button
+                        key={x}
+                        type="button"
+                        onClick={() => setPreferred(x)}
+                        className={[
+                          "rounded-2xl border px-3 py-3 text-[12px] font-semibold transition",
+                          preferred === x
+                            ? "border-black/15 bg-[#C8A45D]/20 text-black"
+                            : "border-black/10 bg-white text-black/70 hover:bg-black/[0.03]",
+                        ].join(" ")}
+                      >
+                        {x}
+                      </button>
+                    )
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-black/10 p-4">
+              <label className="text-[11px] font-semibold text-black/60">
+                What do you need help with?
+              </label>
+              <textarea
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                className="mt-2 h-[214px] w-full resize-none rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm outline-none focus:border-black/20"
+                placeholder="Tell us what you’re looking for (budget, timeline, type, etc.)"
+              />
+
+              <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
+                <a
+                  className="inline-flex items-center gap-2 rounded-2xl bg-black px-4 py-3 text-sm font-semibold text-white hover:bg-black/90"
+                  href={buildMailto({ subject, body })}
+                  onClick={onClose}
+                >
+                  Send request <Icon name="arrow" />
+                </a>
+
+                <div className="text-[11px] text-black/45">
+                  This opens your email client with everything pre-filled.
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="border-t border-black/10 px-6 py-4">
+            <div className="text-[11px] text-black/55">
+              If you’d rather message immediately:{" "}
+              <a
+                className="font-semibold text-black hover:text-[#C8A45D]"
+                href={CONTACT.whatsappLink}
+                target="_blank"
+                rel="noreferrer"
+              >
+                WhatsApp
+              </a>{" "}
+              •{" "}
+              <a
+                className="font-semibold text-black hover:text-[#C8A45D]"
+                href={CONTACT.telegramLink}
+                target="_blank"
+                rel="noreferrer"
+              >
+                Telegram
+              </a>{" "}
+              •{" "}
+              <a
+                className="font-semibold text-black hover:text-[#C8A45D]"
+                href={CONTACT.phoneTel}
+              >
+                Call
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** -------------------- Communities (same list you had) -------------------- */
 type Community = {
   id: string;
   name: string;
@@ -181,7 +381,6 @@ type Community = {
 };
 
 const COMMUNITIES: Community[] = [
-  // Core / Central
   {
     id: "downtown",
     name: "Downtown Dubai",
@@ -227,7 +426,6 @@ const COMMUNITIES: Community[] = [
       "A clean, premium lifestyle pocket with strong central connectivity.",
   },
 
-  // Coastal / New Dubai
   {
     id: "marina",
     name: "Dubai Marina",
@@ -282,7 +480,6 @@ const COMMUNITIES: Community[] = [
       "A flagship luxury address with lifestyle value and strong brand equity.",
   },
 
-  // Master communities / family hubs
   {
     id: "dubai-hills",
     name: "Dubai Hills Estate",
@@ -315,7 +512,6 @@ const COMMUNITIES: Community[] = [
     notes: "Future-forward waterfront district with strong long-term appeal.",
   },
 
-  // Value + broad inventory
   {
     id: "jvc",
     name: "Jumeirah Village Circle (JVC)",
@@ -339,7 +535,6 @@ const COMMUNITIES: Community[] = [
       "A calmer alternative to JVC with more space and a residential vibe.",
   },
 
-  // Established villa clusters
   {
     id: "springs",
     name: "The Springs",
@@ -383,7 +578,6 @@ const COMMUNITIES: Community[] = [
       "A popular master community with broad stock and lifestyle amenities.",
   },
 
-  // More communities (added)
   {
     id: "al-barsha",
     name: "Al Barsha",
@@ -604,7 +798,7 @@ function communityQuery(name: string) {
 export default function DiscoverCommunitiesPage() {
   const mapsKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "";
 
-  // Nav hide on scroll (page-only)
+  // Nav hide on scroll (same behavior)
   const [navHidden, setNavHidden] = useState(false);
   const lastY = useRef(0);
 
@@ -629,6 +823,9 @@ export default function DiscoverCommunitiesPage() {
     () => COMMUNITIES.find((c) => c.id === selectedId) || COMMUNITIES[0],
     [selectedId]
   );
+
+  // Contact pop-up
+  const [contactOpen, setContactOpen] = useState(false);
 
   // Map
   const mapElRef = useRef<HTMLDivElement | null>(null);
@@ -689,7 +886,6 @@ export default function DiscoverCommunitiesPage() {
     const places = placesRef.current;
     if (!c || !map || !places || !isGoogleReady()) return;
 
-    // cache
     const cached = cacheRef.current[id];
     if (cached?.bounds || cached?.location) {
       applyFocus(cached);
@@ -771,7 +967,6 @@ export default function DiscoverCommunitiesPage() {
 
   const onPick = (id: string) => {
     setSelectedId(id);
-    // for embed fallback, nothing else required
   };
 
   const embedSrc = useMemo(() => {
@@ -784,24 +979,33 @@ export default function DiscoverCommunitiesPage() {
 
   return (
     <div className="min-h-screen bg-white text-black">
-      {/* NAV skin: transparent + black text; hover gold */}
+      {/* NAV skin (NOW WHITE) */}
       <style jsx global>{`
-        .ks-nav-transparent {
+        .ks-nav-white {
           background: transparent !important;
         }
-        .ks-nav-transparent a,
-        .ks-nav-transparent button,
-        .ks-nav-transparent span,
-        .ks-nav-transparent div {
-          color: rgba(0, 0, 0, 0.92);
+        /* Force the pill/box + any nav wrappers to white */
+        .ks-nav-white,
+        .ks-nav-white header,
+        .ks-nav-white nav,
+        .ks-nav-white > div,
+        .ks-nav-white > header,
+        .ks-nav-white > nav {
+          background: #ffffff !important;
         }
-        .ks-nav-transparent a:hover,
-        .ks-nav-transparent button:hover {
+        .ks-nav-white a,
+        .ks-nav-white button,
+        .ks-nav-white span,
+        .ks-nav-white div {
+          color: rgba(0, 0, 0, 0.92) !important;
+        }
+        .ks-nav-white a:hover,
+        .ks-nav-white button:hover {
           color: #c8a45d !important;
         }
       `}</style>
 
-      {/* Load Google Maps JS if key exists (otherwise we ALWAYS show embed map) */}
+      {/* Load Google Maps JS if key exists (otherwise fallback embed) */}
       {mapsKey ? (
         <Script
           src={`https://maps.googleapis.com/maps/api/js?key=${mapsKey}&libraries=places`}
@@ -814,7 +1018,7 @@ export default function DiscoverCommunitiesPage() {
         />
       ) : null}
 
-      {/* Transparent nav wrapper + hide on scroll down */}
+      {/* White nav wrapper + hide on scroll down */}
       <div
         className={[
           "fixed left-0 right-0 top-0 z-50 transition-all duration-300",
@@ -823,7 +1027,7 @@ export default function DiscoverCommunitiesPage() {
             : "translate-y-0 opacity-100",
         ].join(" ")}
       >
-        <div className="ks-nav-transparent">
+        <div className="ks-nav-white">
           <KeystneNav />
         </div>
       </div>
@@ -848,7 +1052,7 @@ export default function DiscoverCommunitiesPage() {
       <section className="bg-white">
         <div className="mx-auto max-w-6xl px-4 pb-14">
           <div className="grid gap-5 md:grid-cols-[1.6fr_0.9fr]">
-            {/* MAP + SUMMARY (summary at bottom, NOT overlay) */}
+            {/* MAP + SUMMARY */}
             <div className="rounded-[28px] border border-black/10 bg-white shadow-ks overflow-hidden">
               <div className="flex items-center justify-between gap-3 border-b border-black/10 px-5 py-4">
                 <div>
@@ -873,7 +1077,6 @@ export default function DiscoverCommunitiesPage() {
                     <button
                       type="button"
                       onClick={() => {
-                        // if JS failed earlier, allow re-init attempt
                         if (mapsKey) {
                           setMapMsg("");
                           if (isGoogleReady()) initMap();
@@ -931,7 +1134,7 @@ export default function DiscoverCommunitiesPage() {
                 ) : null}
               </div>
 
-              {/* SUMMARY (at the bottom of the map) */}
+              {/* SUMMARY (still bottom) */}
               <div className="border-t border-black/10 p-5">
                 <div className="text-[11px] tracking-[0.22em] text-black/55">
                   SUMMARY
@@ -1009,21 +1212,20 @@ export default function DiscoverCommunitiesPage() {
                   </div>
                 </div>
 
+                {/* CONTACT US (NOW OPENS POP-UP) */}
                 <div className="mt-4 flex justify-end">
-                  <a
+                  <button
+                    type="button"
                     className="inline-flex items-center justify-center gap-2 rounded-2xl bg-black px-4 py-3 text-sm font-semibold text-white hover:bg-black/90"
-                    href={buildMailto({
-                      subject: "Keystne — Community shortlist request",
-                      body: `Hi Keystne team,\n\nI’m interested in: ${selected?.name}\n\nBudget / requirement:\nTimeline:\nBedrooms / property type:\n\nName:\nPhone:\nEmail:\n\nThank you`,
-                    })}
+                    onClick={() => setContactOpen(true)}
                   >
                     Contact us <Icon name="arrow" />
-                  </a>
+                  </button>
                 </div>
               </div>
             </div>
 
-            {/* RIGHT SIDE (reverted: simple tiles list, no extra cards) */}
+            {/* RIGHT SIDE (ONLY change: scroll area max-height so it doesn't cut off) */}
             <div className="rounded-[28px] border border-black/10 bg-white shadow-ks overflow-hidden">
               <div className="border-b border-black/10 px-5 py-4">
                 <div className="text-[11px] tracking-[0.22em] text-black/55">
@@ -1034,7 +1236,8 @@ export default function DiscoverCommunitiesPage() {
                 </div>
               </div>
 
-              <div className="max-h-[680px] overflow-auto p-4">
+              {/* Changed from max-h-[680px] to viewport-based so it scrolls fully */}
+              <div className="max-h-[calc(100vh-260px)] overflow-y-auto p-4 pb-6">
                 <div className="grid gap-3">
                   {COMMUNITIES.map((c) => {
                     const active = c.id === selectedId;
@@ -1044,7 +1247,6 @@ export default function DiscoverCommunitiesPage() {
                         type="button"
                         onClick={() => {
                           onPick(c.id);
-                          // If JS map is active, re-focus
                           if (mapMode === "js") focusCommunity(c.id);
                         }}
                         className={[
@@ -1103,6 +1305,13 @@ export default function DiscoverCommunitiesPage() {
 
       <KeystneFooter />
       <ContactDock />
+
+      {/* Contact pop-up */}
+      <ContactModal
+        open={contactOpen}
+        onClose={() => setContactOpen(false)}
+        defaultCommunity={selected?.name || "Dubai"}
+      />
     </div>
   );
 }
