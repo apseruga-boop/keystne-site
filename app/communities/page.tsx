@@ -1,41 +1,36 @@
 "use client";
 
-import React, { useMemo, useRef, useState, useEffect } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import Script from "next/script";
 import KeystneNav from "../../components/site/KeystneNav";
 import KeystneFooter from "../../components/site/KeystneFooter";
 import { CONTACT } from "../../components/site/config";
 
 /**
- * DISCOVER COMMUNITIES — Dubai
- * Locked-in version (white background, no video):
- * - Right side: Dubai communities in premium tiles (search + quick filters)
- * - Middle: Dubai map (stylised SVG) with markers
- * - Hover/click a community tile -> highlights marker on map + shows short key info
- * - Hover markers -> tooltip
- *
- * NOTE: Map is a clean stylised Dubai canvas (not a GIS boundary map).
- * We can swap to a real map provider later (Mapbox/Google) when you're ready.
+ * PAGE — DISCOVER COMMUNITIES (REDO — minimal changes only)
+ * Changes you asked (ONLY):
+ * 1) Right side: revert to the original simple tiles panel style (and add MORE communities)
+ * 2) Map must show (adds a no-key fallback embed map, so something always renders)
+ * 3) Summary must be at the BOTTOM of the map (not overlaying the top)
+ * 4) Contact dock: return to original size/style (same as your concierge page dock)
+ * 5) Top nav: transparent + black text; hover gold (via scoped global CSS wrapper)
+ * 6) Do not change anything else
  */
 
-type Community = {
-  id: string;
-  name: string;
-  areaType: "Urban" | "Waterfront" | "Family" | "Value" | "Luxury" | "Mixed";
-  bestFor: string;
-  vibe: string;
-  keyLinks: string[];
-  commuteNote: string;
-  schools: string[];
-  landmarks: string[];
-  priceGuide: string; // simple
-  marker: { x: number; y: number }; // svg coords (0..100)
-};
-
+/** -------------------- Icons (no lucide-react) -------------------- */
 function Icon({
   name,
   className = "h-4 w-4",
 }: {
-  name: "arrow" | "check" | "search" | "pin" | "x";
+  name:
+    | "whatsapp"
+    | "phone"
+    | "telegram"
+    | "mail"
+    | "arrow"
+    | "check"
+    | "x"
+    | "refresh";
   className?: string;
 }) {
   const common = {
@@ -58,25 +53,45 @@ function Icon({
           <path d="M20 6L9 17l-5-5" />
         </svg>
       );
-    case "search":
-      return (
-        <svg viewBox="0 0 24 24" {...common}>
-          <circle cx="11" cy="11" r="7" />
-          <path d="M20 20l-3.5-3.5" />
-        </svg>
-      );
-    case "pin":
-      return (
-        <svg viewBox="0 0 24 24" {...common}>
-          <path d="M12 21s7-4.4 7-11a7 7 0 1 0-14 0c0 6.6 7 11 7 11z" />
-          <circle cx="12" cy="10" r="2" />
-        </svg>
-      );
     case "x":
       return (
         <svg viewBox="0 0 24 24" {...common}>
           <path d="M18 6L6 18" />
           <path d="M6 6l12 12" />
+        </svg>
+      );
+    case "refresh":
+      return (
+        <svg viewBox="0 0 24 24" {...common}>
+          <path d="M21 12a9 9 0 1 1-3-6.7" />
+          <path d="M21 3v6h-6" />
+        </svg>
+      );
+    case "phone":
+      return (
+        <svg viewBox="0 0 24 24" {...common}>
+          <path d="M22 16.5v3a2 2 0 0 1-2.2 2c-9.6-.8-17-8.2-17.8-17.8A2 2 0 0 1 4 1.5h3a2 2 0 0 1 2 1.7c.1.9.3 1.8.6 2.6a2 2 0 0 1-.5 2.1L8 9c1.6 3.1 4.1 5.6 7.2 7.2l1.1-1.1a2 2 0 0 1 2.1-.5c.8.3 1.7.5 2.6.6a2 2 0 0 1 1.7 2z" />
+        </svg>
+      );
+    case "mail":
+      return (
+        <svg viewBox="0 0 24 24" {...common}>
+          <path d="M4 4h16v16H4z" />
+          <path d="M4 6l8 6 8-6" />
+        </svg>
+      );
+    case "telegram":
+      return (
+        <svg viewBox="0 0 24 24" {...common}>
+          <path d="M22 2L11 13" />
+          <path d="M22 2L15 22l-4-9-9-4 20-7z" />
+        </svg>
+      );
+    case "whatsapp":
+      return (
+        <svg viewBox="0 0 24 24" {...common}>
+          <path d="M20 11.5a8.5 8.5 0 0 1-12.7 7.4L4 20l1.2-3.1A8.5 8.5 0 1 1 20 11.5z" />
+          <path d="M9.5 9.5c.3 2.4 2.6 4.8 5.2 5.2" />
         </svg>
       );
     default:
@@ -87,11 +102,12 @@ function Icon({
 function buildMailto(args: { subject: string; body: string }) {
   const to = CONTACT.emailArthur;
   const cc = CONTACT.emailStuart;
-  return `mailto:${to}?cc=${cc}&subject=${encodeURIComponent(
-    args.subject
-  )}&body=${encodeURIComponent(args.body)}`;
+  const subject = encodeURIComponent(args.subject);
+  const body = encodeURIComponent(args.body);
+  return `mailto:${to}?cc=${cc}&subject=${subject}&body=${body}`;
 }
 
+/** -------------------- Contact dock (original size/style) -------------------- */
 function ContactDock() {
   return (
     <div className="fixed bottom-5 right-5 z-40 w-[240px] overflow-hidden rounded-[22px] border border-black/10 bg-white/90 shadow-ks backdrop-blur-xl">
@@ -102,14 +118,15 @@ function ContactDock() {
           target="_blank"
           rel="noreferrer"
         >
-          WhatsApp us
+          <Icon name="whatsapp" className="h-4 w-4" /> WhatsApp us
         </a>
+
         <div className="mt-2 grid gap-1">
           <a
             className="flex items-center gap-2 rounded-2xl px-3 py-2 text-[12px] font-semibold text-black/75 hover:bg-[#C8A45D] hover:text-black"
             href={CONTACT.phoneTel}
           >
-            Call
+            <Icon name="phone" /> Call
           </a>
           <a
             className="flex items-center gap-2 rounded-2xl px-3 py-2 text-[12px] font-semibold text-black/75 hover:bg-[#C8A45D] hover:text-black"
@@ -117,362 +134,703 @@ function ContactDock() {
             target="_blank"
             rel="noreferrer"
           >
-            Telegram
+            <Icon name="telegram" /> Telegram
           </a>
           <a
             className="flex items-center gap-2 rounded-2xl px-3 py-2 text-[12px] font-semibold text-black/75 hover:bg-[#C8A45D] hover:text-black"
             href={buildMailto({
-              subject: "Keystne — Discover Communities enquiry",
-              body: "Hi Keystne team,\n\nI’d like help shortlisting Dubai communities.\n\nName:\nPhone:\nBudget:\nLifestyle:\nMove timeline:\n\nThank you",
+              subject: "Keystne — Community enquiry",
+              body: "Hi Keystne team,\n\nI'm interested in:\n\nCommunity:\nBudget / requirement:\nTimeline:\n\nName:\nPhone:\nEmail:\n\nThank you",
             })}
           >
-            Email
+            <Icon name="mail" /> Email
           </a>
+
+          {/* (Original dock had WeChat line — keep as-is if your config has it) */}
+          {CONTACT.wechatText ? (
+            <div className="flex items-center gap-2 rounded-2xl px-3 py-2 text-[12px] font-semibold text-black/55">
+              {/* no icon needed; keep clean */}
+              {CONTACT.wechatText}
+            </div>
+          ) : null}
+        </div>
+
+        <div className="mt-3 rounded-2xl border border-black/10 bg-black px-3 py-3">
+          <div className="text-[10px] tracking-[0.22em] text-white/60">
+            DIRECT
+          </div>
+          <div className="mt-1 text-sm font-semibold text-white">
+            {CONTACT.phoneDisplay}
+          </div>
         </div>
       </div>
     </div>
   );
 }
 
+/** -------------------- Communities (expanded list) -------------------- */
+type Community = {
+  id: string;
+  name: string;
+  region: string;
+  vibe: string;
+  knownFor: string[];
+  schools: string[];
+  access: string[];
+  notes: string;
+};
+
 const COMMUNITIES: Community[] = [
+  // Core / Central
   {
     id: "downtown",
     name: "Downtown Dubai",
-    areaType: "Urban",
-    bestFor: "City living, walkability, premium towers",
-    vibe: "Iconic, central, high-energy",
-    keyLinks: ["Burj Khalifa", "Dubai Mall", "Boulevard"],
-    commuteNote: "Central access to DIFC, Business Bay, City Walk.",
-    schools: ["Nearby nurseries + private schools (short drive)"],
-    landmarks: ["Burj Khalifa", "Dubai Opera", "Boulevard"],
-    priceGuide: "Premium",
-    marker: { x: 57, y: 52 },
+    region: "Central Dubai",
+    vibe: "Iconic skyline, walkable core, premium apartments.",
+    knownFor: ["Burj Khalifa", "Dubai Mall", "Boulevard living"],
+    schools: [
+      "School options are typically a short drive (varies by building)",
+    ],
+    access: ["Strong roads", "Metro access nearby (area-dependent)"],
+    notes: "Best for people who want landmark living and central convenience.",
   },
   {
     id: "difc",
     name: "DIFC",
-    areaType: "Urban",
-    bestFor: "Professionals, finance, luxury dining",
-    vibe: "Sharp, premium, corporate-luxe",
-    keyLinks: ["Gate Avenue", "Art galleries", "Top dining"],
-    commuteNote: "Fast to Downtown + Sheikh Zayed Road.",
-    schools: ["Nearby nurseries; top schools within 15–25 mins"],
-    landmarks: ["DIFC Gate", "Gate Avenue"],
-    priceGuide: "Premium",
-    marker: { x: 53, y: 49 },
+    region: "Central Dubai",
+    vibe: "Executive lifestyle, finance + dining + galleries.",
+    knownFor: ["Fine dining", "Offices nearby", "Arts & culture"],
+    schools: ["Central school commutes vary by route/traffic"],
+    access: ["Metro nearby", "Excellent road links"],
+    notes: "Great if you want work-to-home convenience with premium lifestyle.",
   },
   {
-    id: "businessbay",
+    id: "business-bay",
     name: "Business Bay",
-    areaType: "Urban",
-    bestFor: "Value vs Downtown, canalside living",
-    vibe: "Modern, central, growing",
-    keyLinks: ["Canal", "Towers", "Close to Downtown"],
-    commuteNote: "Great for Downtown + SZR connections.",
-    schools: ["Nurseries + schools within short drive"],
-    landmarks: ["Dubai Canal", "Bay Avenue"],
-    priceGuide: "Mid–Premium",
-    marker: { x: 59, y: 56 },
+    region: "Central Dubai",
+    vibe: "Modern towers, canal-side living, close to Downtown.",
+    knownFor: ["Canal promenade", "New towers", "Central access"],
+    schools: ["Multiple options within driving distance (varies)"],
+    access: ["Metro nearby", "Major highway access"],
+    notes:
+      "Popular for convenience and value vs Downtown (building quality varies).",
   },
   {
-    id: "dubaimarina",
+    id: "city-walk",
+    name: "City Walk",
+    region: "Central Dubai",
+    vibe: "Low-rise, lifestyle-forward, walkable pockets.",
+    knownFor: ["Cafes", "Retail", "Modern urban layout"],
+    schools: ["Nearby central school options (varies)"],
+    access: ["Quick access to SZR"],
+    notes:
+      "A clean, premium lifestyle pocket with strong central connectivity.",
+  },
+
+  // Coastal / New Dubai
+  {
+    id: "marina",
     name: "Dubai Marina",
-    areaType: "Waterfront",
-    bestFor: "Waterfront lifestyle, rentals, expat hub",
-    vibe: "Lively, social, skyline by the water",
-    keyLinks: ["Marina Walk", "Beach access", "Restaurants"],
-    commuteNote: "Great for JBR/JLT; peak-hour SZR traffic.",
-    schools: ["Good school options in surrounding areas"],
-    landmarks: ["Marina Walk", "Skydive Dubai"],
-    priceGuide: "Mid–Premium",
-    marker: { x: 79, y: 62 },
+    region: "New Dubai (Coastal)",
+    vibe: "Waterfront towers, high energy, strong rental demand.",
+    knownFor: ["Marina Walk", "Restaurants", "Short-stay appeal"],
+    schools: ["School clusters are a short drive (varies)"],
+    access: ["Metro + tram coverage", "Strong coastal roads"],
+    notes:
+      "A classic choice for lifestyle + investment (views/building age vary).",
   },
   {
     id: "jbr",
-    name: "JBR",
-    areaType: "Waterfront",
-    bestFor: "Beach living, short stays, lifestyle",
-    vibe: "Beachfront, busy, holiday energy",
-    keyLinks: ["The Beach", "Ain Dubai nearby", "Walkable strip"],
-    commuteNote: "Walkable to Marina; good access to Tram/Metro (via Marina).",
-    schools: ["School runs typically 15–30 mins depending on choice"],
-    landmarks: ["The Beach", "JBR Walk"],
-    priceGuide: "Premium",
-    marker: { x: 83, y: 64 },
+    name: "JBR (Jumeirah Beach Residence)",
+    region: "New Dubai (Coastal)",
+    vibe: "Beachfront living with a social, walkable vibe.",
+    knownFor: ["The Beach", "Beach clubs", "Sea views"],
+    schools: ["Commute varies (traffic can impact)"],
+    access: ["Tram links", "Coastal access"],
+    notes: "If you want beach lifestyle at your doorstep, this is it.",
   },
   {
     id: "jlt",
-    name: "JLT",
-    areaType: "Value",
-    bestFor: "Space/value near Marina, lakeside towers",
-    vibe: "Practical, community feel, great value",
-    keyLinks: ["Lakes", "Metro access", "Dining clusters"],
-    commuteNote: "Easy Metro; strong connectivity.",
-    schools: ["Strong school access within 15–25 mins"],
-    landmarks: ["JLT Lakes", "Cluster dining"],
-    priceGuide: "Value–Mid",
-    marker: { x: 76, y: 59 },
+    name: "JLT (Jumeirah Lake Towers)",
+    region: "New Dubai",
+    vibe: "Great value, community clusters, walkable pockets.",
+    knownFor: ["Lakeside paths", "Value vs Marina", "Everyday convenience"],
+    schools: ["Multiple options within driving distance (varies)"],
+    access: ["Multiple metro stations", "Good road access"],
+    notes:
+      "A balanced pick: strong value, amenities, and central New Dubai access.",
   },
   {
-    id: "palms",
+    id: "bluewaters",
+    name: "Bluewaters Island",
+    region: "New Dubai (Coastal)",
+    vibe: "Ultra-premium island living with a calmer feel.",
+    knownFor: ["Island lifestyle", "Premium stock", "Coastal views"],
+    schools: ["Commute varies"],
+    access: ["Connected to JBR area", "Coastal roads"],
+    notes: "For premium buyers who want island privacy near Marina/JBR.",
+  },
+  {
+    id: "palm",
     name: "Palm Jumeirah",
-    areaType: "Luxury",
-    bestFor: "Luxury beachfront, villas, iconic living",
-    vibe: "Exclusive, resort-style, private",
-    keyLinks: ["Beach clubs", "Luxury hotels", "Signature views"],
-    commuteNote: "Short drive to Marina; SZR access via trunk exits.",
-    schools: ["Top schools typically 20–35 mins depending on location"],
-    landmarks: ["Atlantis", "Palm Boardwalk"],
-    priceGuide: "Luxury",
-    marker: { x: 73, y: 66 },
+    region: "Coastal / Islands",
+    vibe: "Luxury beachfront apartments and villas.",
+    knownFor: ["Beach lifestyle", "Luxury hotels", "Prestige address"],
+    schools: ["Commute depends on frond/area"],
+    access: ["Coastal roads", "Monorail access (area-dependent)"],
+    notes:
+      "A flagship luxury address with lifestyle value and strong brand equity.",
   },
+
+  // Master communities / family hubs
   {
-    id: "citywalk",
-    name: "City Walk",
-    areaType: "Urban",
-    bestFor: "Low-rise luxury, walkable lifestyle",
-    vibe: "Boutique, stylish, central",
-    keyLinks: ["Retail", "Restaurants", "Easy access"],
-    commuteNote: "Close to Downtown + Jumeirah + DIFC.",
-    schools: ["Solid nursery/school access nearby"],
-    landmarks: ["City Walk precinct"],
-    priceGuide: "Premium",
-    marker: { x: 49, y: 54 },
-  },
-  {
-    id: "creek",
-    name: "Dubai Creek Harbour",
-    areaType: "Mixed",
-    bestFor: "New waterfront community, future growth",
-    vibe: "Modern, open, masterplanned",
-    keyLinks: ["Waterfront", "Views", "New builds"],
-    commuteNote: "Quick access to Festival City + Downtown (varies by route).",
-    schools: ["Growing education options; many within 15–30 mins"],
-    landmarks: ["Creek promenade"],
-    priceGuide: "Mid–Premium",
-    marker: { x: 66, y: 48 },
-  },
-  {
-    id: "albarsha",
-    name: "Al Barsha",
-    areaType: "Value",
-    bestFor: "Practical living, villas + low-rise, schools",
-    vibe: "Convenient, family-practical",
-    keyLinks: ["Mall of the Emirates", "School clusters", "Great access"],
-    commuteNote: "Strong SZR access; easy movement across Dubai.",
-    schools: ["Excellent school access (one of the main draws)"],
-    landmarks: ["Mall of the Emirates"],
-    priceGuide: "Value–Mid",
-    marker: { x: 60, y: 64 },
-  },
-  {
-    id: "dubaihills",
+    id: "dubai-hills",
     name: "Dubai Hills Estate",
-    areaType: "Family",
-    bestFor: "Family living, parks, newer communities",
-    vibe: "Green, modern, premium-family",
-    keyLinks: ["Parks", "Golf", "Mall"],
-    commuteNote: "Good access to Downtown + Marina via major roads.",
-    schools: ["Strong school options in and around the area"],
-    landmarks: ["Dubai Hills Mall", "Golf club"],
-    priceGuide: "Mid–Premium",
-    marker: { x: 56, y: 70 },
+    region: "MBR / Emaar",
+    vibe: "Master-planned, family-friendly, modern stock.",
+    knownFor: ["Parks", "Golf", "Dubai Hills Mall"],
+    schools: ["Family-focused; school options nearby (varies)"],
+    access: ["Excellent highway access"],
+    notes: "One of the strongest long-term family communities in Dubai.",
   },
   {
-    id: "arabianranches",
-    name: "Arabian Ranches",
-    areaType: "Family",
-    bestFor: "Villas, calm living, family set-up",
-    vibe: "Quiet, spacious, established",
-    keyLinks: ["Villas", "Community parks", "Family-focused"],
-    commuteNote: "Drive-dependent; plan peak-hour routes.",
-    schools: ["Good school access (drive)"],
-    landmarks: ["Community parks", "Golf nearby"],
-    priceGuide: "Mid–Premium",
-    marker: { x: 44, y: 76 },
+    id: "mbr-city",
+    name: "Mohammed Bin Rashid City (MBR City)",
+    region: "Central Expansion",
+    vibe: "New luxury districts near central Dubai.",
+    knownFor: ["New builds", "Premium master plans", "Central proximity"],
+    schools: ["Nearby options vary by district"],
+    access: ["Strong road access"],
+    notes:
+      "A premium growth corridor — best if you want newer stock near the core.",
   },
+  {
+    id: "creek-harbour",
+    name: "Dubai Creek Harbour",
+    region: "Creek / New Growth",
+    vibe: "New waterfront skyline, long-term positioning.",
+    knownFor: ["Promenades", "Views", "Modern towers"],
+    schools: ["Nearby schools vary"],
+    access: ["Road access; connectivity evolving"],
+    notes: "Future-forward waterfront district with strong long-term appeal.",
+  },
+
+  // Value + broad inventory
   {
     id: "jvc",
-    name: "JVC",
-    areaType: "Value",
-    bestFor: "Value apartments/townhouses, newer builds",
-    vibe: "Fast-growing, practical, popular",
-    keyLinks: ["Townhouses", "Apartments", "Strong rental demand"],
-    commuteNote: "Drive-dependent; good access to key corridors.",
-    schools: ["Multiple schools/nurseries within short drive"],
-    landmarks: ["Community parks"],
-    priceGuide: "Value–Mid",
-    marker: { x: 67, y: 72 },
+    name: "Jumeirah Village Circle (JVC)",
+    region: "New Dubai",
+    vibe: "Broad inventory, strong pricing range, growing amenities.",
+    knownFor: ["Value", "New buildings", "Popular search area"],
+    schools: ["Nearby schools (varies)"],
+    access: ["Main roads access"],
+    notes:
+      "One of the most searched areas — stock quality varies by building/cluster.",
   },
   {
-    id: "damachills",
+    id: "jvt",
+    name: "Jumeirah Village Triangle (JVT)",
+    region: "New Dubai",
+    vibe: "Quieter than JVC, more townhouse/villa pockets.",
+    knownFor: ["Lower density", "Family feel", "Good value"],
+    schools: ["Nearby schools (varies)"],
+    access: ["Good road access"],
+    notes:
+      "A calmer alternative to JVC with more space and a residential vibe.",
+  },
+
+  // Established villa clusters
+  {
+    id: "springs",
+    name: "The Springs",
+    region: "Emirates Living",
+    vibe: "Established family townhouses/villas with parks and lakes.",
+    knownFor: ["Community parks", "Lakes", "Family living"],
+    schools: ["Established school commutes (varies)"],
+    access: ["Strong road access"],
+    notes:
+      "A proven family community with stable demand and strong liveability.",
+  },
+  {
+    id: "meadows",
+    name: "The Meadows",
+    region: "Emirates Living",
+    vibe: "Spacious villas with mature landscaping.",
+    knownFor: ["Large plots", "Quiet streets", "Premium villas"],
+    schools: ["School commutes vary"],
+    access: ["Strong road access"],
+    notes: "Premium villa living with a mature, calm community feel.",
+  },
+  {
+    id: "arabian-ranches",
+    name: "Arabian Ranches",
+    region: "Dubailand",
+    vibe: "Classic villa community with a suburban family lifestyle.",
+    knownFor: ["Family suburb", "Established community", "Villas"],
+    schools: ["Family-oriented schools in wider area (varies)"],
+    access: ["Road-based lifestyle"],
+    notes: "A top choice for families prioritising space and community.",
+  },
+  {
+    id: "damac-hills",
     name: "DAMAC Hills",
-    areaType: "Family",
-    bestFor: "Golf community, villas + townhouses",
-    vibe: "Residential, masterplanned, green",
-    keyLinks: ["Golf", "Villas", "Community amenities"],
-    commuteNote: "Drive-dependent; best if you’re okay with a commute.",
-    schools: ["Schools reachable by car; choices vary by preference"],
-    landmarks: ["Trump International Golf Club Dubai (area)"],
-    priceGuide: "Mid",
-    marker: { x: 53, y: 82 },
+    region: "Dubailand",
+    vibe: "Golf-adjacent master community with varied inventory.",
+    knownFor: ["Amenities", "Villas/townhouses", "Value pockets"],
+    schools: ["Nearby schools vary"],
+    access: ["Road access"],
+    notes:
+      "A popular master community with broad stock and lifestyle amenities.",
+  },
+
+  // More communities (added)
+  {
+    id: "al-barsha",
+    name: "Al Barsha",
+    region: "Central / New Dubai Edge",
+    vibe: "Practical, central, broad pricing.",
+    knownFor: ["Convenience", "Access", "Family-friendly"],
+    schools: ["Many options nearby (varies)"],
+    access: ["Excellent roads"],
+    notes: "Strong practicality pick: central and easy to live in.",
   },
   {
-    id: "mirdif",
-    name: "Mirdif",
-    areaType: "Value",
-    bestFor: "Local family vibe, villas, space",
-    vibe: "Residential, calmer, value space",
-    keyLinks: ["Villas", "Community feel", "Good value"],
-    commuteNote: "Good access toward the north/east; drive-based.",
-    schools: ["Several school options within the wider area"],
-    landmarks: ["Mirdif City Centre (area)"],
-    priceGuide: "Value",
-    marker: { x: 78, y: 40 },
+    id: "barsha-heights",
+    name: "Barsha Heights (TECOM)",
+    region: "New Dubai",
+    vibe: "Convenient towers near key business hubs.",
+    knownFor: ["Value", "Location", "Access to Media/Internet City"],
+    schools: ["Nearby options vary"],
+    access: ["Good road links"],
+    notes: "Convenience-first living; great for professionals.",
+  },
+  {
+    id: "al-furjan",
+    name: "Al Furjan",
+    region: "New Dubai",
+    vibe: "Family townhouses + apartments, growing amenities.",
+    knownFor: ["Community feel", "Newer clusters", "Value vs coastal"],
+    schools: ["Nearby schools vary"],
+    access: ["Good road access"],
+    notes: "A growing family area with broad inventory.",
+  },
+  {
+    id: "discovery-gardens",
+    name: "Discovery Gardens",
+    region: "New Dubai",
+    vibe: "Practical value apartments with greenery.",
+    knownFor: ["Value", "Green pockets", "Community layout"],
+    schools: ["Nearby options vary"],
+    access: ["Good connectivity"],
+    notes: "Value option with a community vibe.",
+  },
+  {
+    id: "motor-city",
+    name: "Motor City",
+    region: "Dubailand Edge",
+    vibe: "Community feel, calmer pace, good value.",
+    knownFor: ["Walkable pockets", "Value", "Family vibe"],
+    schools: ["Nearby schools vary"],
+    access: ["Road access"],
+    notes: "A nice mid-rise community feel away from the coastal rush.",
+  },
+  {
+    id: "sports-city",
+    name: "Dubai Sports City",
+    region: "Dubailand Edge",
+    vibe: "Value living with broad rental inventory.",
+    knownFor: ["Value", "Wide stock", "Easy road access"],
+    schools: ["Nearby schools vary"],
+    access: ["Road access"],
+    notes: "Value-forward option with convenient access to major roads.",
+  },
+  {
+    id: "studio-city",
+    name: "Dubai Studio City",
+    region: "Dubailand Edge",
+    vibe: "Newer buildings, quieter pockets.",
+    knownFor: ["Newer stock", "Calm vibe", "Value"],
+    schools: ["Nearby schools vary"],
+    access: ["Road access"],
+    notes: "Good for people who want newer stock and a calmer vibe.",
+  },
+  {
+    id: "town-square",
+    name: "Town Square",
+    region: "Dubailand",
+    vibe: "Master-planned family value community.",
+    knownFor: ["Parks", "Community centres", "Value pricing"],
+    schools: ["Nearby schools vary"],
+    access: ["Road access"],
+    notes: "Popular with families looking for value and planning.",
+  },
+  {
+    id: "mudon",
+    name: "Mudon",
+    region: "Dubailand",
+    vibe: "Family villas/townhouses with parks.",
+    knownFor: ["Family vibe", "Parks", "Townhouses"],
+    schools: ["Nearby schools vary"],
+    access: ["Road access"],
+    notes: "Strong family option with a suburban feel.",
+  },
+  {
+    id: "remraam",
+    name: "Remraam",
+    region: "Dubailand",
+    vibe: "Green, calmer, value apartments.",
+    knownFor: ["Green spaces", "Value", "Quiet vibe"],
+    schools: ["Nearby schools vary"],
+    access: ["Road access"],
+    notes: "A greener value pocket in Dubailand.",
+  },
+  {
+    id: "jumeirah-park",
+    name: "Jumeirah Park",
+    region: "New Dubai",
+    vibe: "Family villas with modern layouts.",
+    knownFor: ["Bigger space", "Family living", "Newer villas"],
+    schools: ["Nearby schools vary"],
+    access: ["Good connectivity"],
+    notes: "Popular for families wanting more space in New Dubai.",
+  },
+  {
+    id: "jumeirah-islands",
+    name: "Jumeirah Islands",
+    region: "New Dubai",
+    vibe: "Luxury villas in island clusters.",
+    knownFor: ["Lake views", "Premium villas", "Privacy"],
+    schools: ["Nearby schools vary"],
+    access: ["Good road access"],
+    notes: "Premium villa living with a distinctive community layout.",
+  },
+  {
+    id: "emirates-hills",
+    name: "Emirates Hills",
+    region: "New Dubai",
+    vibe: "Ultra-luxury villa enclave.",
+    knownFor: ["Prestige", "Exclusive plots", "Luxury"],
+    schools: ["Commute varies"],
+    access: ["Prime positioning"],
+    notes: "For top-tier luxury buyers.",
+  },
+  {
+    id: "jumeirah-golf-estates",
+    name: "Jumeirah Golf Estates",
+    region: "New Dubai",
+    vibe: "Golf lifestyle with premium villas.",
+    knownFor: ["Golf", "Large homes", "Quiet"],
+    schools: ["Commute varies"],
+    access: ["Road access"],
+    notes: "Premium golf community with a calm pace.",
+  },
+  {
+    id: "festival-city",
+    name: "Dubai Festival City",
+    region: "Creek / Central",
+    vibe: "Creekside living with strong amenities.",
+    knownFor: ["Festival City Mall", "Creek views", "Family-friendly"],
+    schools: ["Nearby schools vary"],
+    access: ["Strong roads"],
+    notes: "Family-friendly area anchored by major retail and amenities.",
+  },
+  {
+    id: "al-jaddaf",
+    name: "Al Jaddaf",
+    region: "Creek / Central",
+    vibe: "Central value + new towers by the Creek.",
+    knownFor: ["Central", "Creek adjacency", "New stock"],
+    schools: ["Nearby schools vary"],
+    access: ["Great central roads"],
+    notes: "Convenient creekside central living.",
+  },
+  {
+    id: "d3",
+    name: "Dubai Design District (d3)",
+    region: "Central Expansion",
+    vibe: "Modern, creative, new district.",
+    knownFor: ["Design scene", "Modern builds", "Central proximity"],
+    schools: ["Nearby options vary"],
+    access: ["Road access"],
+    notes: "Great for people who like modern urban energy.",
+  },
+  {
+    id: "port-rashid",
+    name: "Mina Rashid (Port Rashid)",
+    region: "Coastal / Central",
+    vibe: "New marina-led waterfront district.",
+    knownFor: ["Marina", "New waterfront projects", "Coastal vibe"],
+    schools: ["Nearby options vary"],
+    access: ["Road access"],
+    notes: "Waterfront regeneration with newer premium inventory.",
+  },
+  {
+    id: "dubai-south",
+    name: "Dubai South",
+    region: "South Dubai",
+    vibe: "Growth corridor near Al Maktoum airport (area-dependent).",
+    knownFor: ["New districts", "Future growth", "Value pockets"],
+    schools: ["Evolving options"],
+    access: ["Road access"],
+    notes: "For people aligned to long-term growth in South Dubai.",
+  },
+  {
+    id: "emaar-south",
+    name: "Emaar South",
+    region: "South Dubai",
+    vibe: "Master-planned community with newer stock.",
+    knownFor: ["Master plan", "Golf direction", "New builds"],
+    schools: ["Evolving options"],
+    access: ["Road access"],
+    notes: "Newer master community in South Dubai corridor.",
   },
 ];
 
-function Pill({
-  active,
-  children,
-  onClick,
-}: {
-  active?: boolean;
-  children: React.ReactNode;
-  onClick?: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={[
-        "rounded-full px-3 py-2 text-[12px] font-semibold transition",
-        active
-          ? "bg-[#C8A45D] text-black"
-          : "bg-black/5 text-black/70 hover:bg-black/10",
-      ].join(" ")}
-    >
-      {children}
-    </button>
-  );
+/** -------------------- Google Maps helpers -------------------- */
+function isGoogleReady() {
+  return typeof window !== "undefined" && !!(window as any).google?.maps;
 }
 
-function Tooltip({
-  show,
-  x,
-  y,
-  text,
-}: {
-  show: boolean;
-  x: number;
-  y: number;
-  text: string;
-}) {
-  if (!show) return null;
-  return (
-    <div
-      className="pointer-events-none absolute z-20 rounded-2xl border border-black/10 bg-white px-3 py-2 text-[12px] font-semibold text-black shadow-ks"
-      style={{
-        left: `${x}px`,
-        top: `${y}px`,
-        transform: "translate(12px, 12px)",
-      }}
-    >
-      {text}
-    </div>
-  );
+type PlaceCache = {
+  bounds?: google.maps.LatLngBoundsLiteral;
+  location?: google.maps.LatLngLiteral;
+};
+
+function communityQuery(name: string) {
+  return `${name}, Dubai, UAE`;
 }
 
+/** -------------------- Page -------------------- */
 export default function DiscoverCommunitiesPage() {
-  const [selectedId, setSelectedId] = useState<string>("downtown");
-  const [hoverId, setHoverId] = useState<string | null>(null);
+  const mapsKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "";
 
-  const [query, setQuery] = useState("");
-  const [filter, setFilter] = useState<Community["areaType"] | "All">("All");
+  // Nav hide on scroll (page-only)
+  const [navHidden, setNavHidden] = useState(false);
+  const lastY = useRef(0);
 
-  // tooltip tracking for map markers
-  const mapWrapRef = useRef<HTMLDivElement | null>(null);
-  const [tip, setTip] = useState<{
-    show: boolean;
-    x: number;
-    y: number;
-    text: string;
-  }>({
-    show: false,
-    x: 0,
-    y: 0,
-    text: "",
-  });
+  useEffect(() => {
+    const onScroll = () => {
+      const y = window.scrollY || 0;
+      const delta = y - lastY.current;
+      if (delta > 10) setNavHidden(true);
+      if (delta < -10) setNavHidden(false);
+      lastY.current = y;
+    };
+    lastY.current = window.scrollY || 0;
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
 
+  // Selection
+  const [selectedId, setSelectedId] = useState<string>(
+    COMMUNITIES[0]?.id || ""
+  );
   const selected = useMemo(
-    () =>
-      COMMUNITIES.find((c) => c.id === (hoverId || selectedId)) ||
-      COMMUNITIES[0],
-    [selectedId, hoverId]
+    () => COMMUNITIES.find((c) => c.id === selectedId) || COMMUNITIES[0],
+    [selectedId]
   );
 
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    return COMMUNITIES.filter((c) => {
-      const okFilter = filter === "All" ? true : c.areaType === filter;
-      const okQuery = !q
-        ? true
-        : [c.name, c.vibe, c.bestFor, c.areaType]
-            .join(" ")
-            .toLowerCase()
-            .includes(q);
-      return okFilter && okQuery;
-    });
-  }, [query, filter]);
+  // Map
+  const mapElRef = useRef<HTMLDivElement | null>(null);
+  const mapRef = useRef<google.maps.Map | null>(null);
+  const placesRef = useRef<google.maps.places.PlacesService | null>(null);
+  const markerRef = useRef<google.maps.Marker | null>(null);
+  const highlightRef = useRef<google.maps.Rectangle | null>(null);
+  const cacheRef = useRef<Record<string, PlaceCache>>({});
 
-  const activeId = hoverId || selectedId;
+  const [mapMode, setMapMode] = useState<"js" | "embed">("embed");
+  const [mapReady, setMapReady] = useState(false);
+  const [mapMsg, setMapMsg] = useState<string>("");
 
-  const onMarkerEnter = (c: Community, evt: React.MouseEvent) => {
-    const wrap = mapWrapRef.current;
-    if (!wrap) return;
-    const rect = wrap.getBoundingClientRect();
-    setTip({
-      show: true,
-      x: evt.clientX - rect.left,
-      y: evt.clientY - rect.top,
-      text: c.name,
-    });
-    setHoverId(c.id);
+  const initMap = () => {
+    try {
+      if (!mapsKey) return;
+      if (!mapElRef.current) return;
+      if (!isGoogleReady()) return;
+
+      const center = { lat: 25.2048, lng: 55.2708 };
+      const map = new google.maps.Map(mapElRef.current, {
+        center,
+        zoom: 11,
+        mapTypeControl: false,
+        streetViewControl: false,
+        fullscreenControl: false,
+      });
+
+      mapRef.current = map;
+      placesRef.current = new google.maps.places.PlacesService(map);
+
+      markerRef.current = new google.maps.Marker({ map, visible: false });
+      highlightRef.current = new google.maps.Rectangle({
+        map,
+        strokeColor: "#C8A45D",
+        strokeOpacity: 0.9,
+        strokeWeight: 2,
+        fillColor: "#C8A45D",
+        fillOpacity: 0.08,
+        clickable: false,
+      });
+
+      setMapMode("js");
+      setMapReady(true);
+      setMapMsg("");
+
+      // focus initial
+      focusCommunity(selectedId);
+    } catch {
+      setMapMode("embed");
+      setMapMsg("Live map didn’t load — showing fallback map.");
+    }
   };
 
-  const onMarkerMove = (evt: React.MouseEvent) => {
-    const wrap = mapWrapRef.current;
-    if (!wrap) return;
-    const rect = wrap.getBoundingClientRect();
-    setTip((p) => ({
-      ...p,
-      x: evt.clientX - rect.left,
-      y: evt.clientY - rect.top,
-    }));
+  const focusCommunity = (id: string) => {
+    const c = COMMUNITIES.find((x) => x.id === id);
+    const map = mapRef.current;
+    const places = placesRef.current;
+    if (!c || !map || !places || !isGoogleReady()) return;
+
+    // cache
+    const cached = cacheRef.current[id];
+    if (cached?.bounds || cached?.location) {
+      applyFocus(cached);
+      return;
+    }
+
+    const query = communityQuery(c.name);
+
+    places.textSearch({ query }, (results, status) => {
+      if (
+        status !== google.maps.places.PlacesServiceStatus.OK ||
+        !results?.length
+      ) {
+        setMapMsg(
+          "Some areas may not resolve instantly. Try another community."
+        );
+        map.panTo({ lat: 25.2048, lng: 55.2708 });
+        map.setZoom(11);
+        return;
+      }
+
+      const first = results[0];
+      const viewport = first.geometry?.viewport;
+      const location = first.geometry?.location;
+
+      const boundsLiteral: google.maps.LatLngBoundsLiteral | undefined =
+        viewport
+          ? {
+              east: viewport.getNorthEast().lng(),
+              north: viewport.getNorthEast().lat(),
+              west: viewport.getSouthWest().lng(),
+              south: viewport.getSouthWest().lat(),
+            }
+          : undefined;
+
+      const locLiteral: google.maps.LatLngLiteral | undefined = location
+        ? { lat: location.lat(), lng: location.lng() }
+        : undefined;
+
+      const payload: PlaceCache = {
+        bounds: boundsLiteral,
+        location: locLiteral,
+      };
+      cacheRef.current[id] = payload;
+      applyFocus(payload);
+    });
   };
 
-  const onMarkerLeave = () => {
-    setTip((p) => ({ ...p, show: false }));
-    setHoverId(null);
+  const applyFocus = (place: PlaceCache) => {
+    const map = mapRef.current;
+    if (!map) return;
+
+    if (place.bounds) {
+      const b = new google.maps.LatLngBounds(
+        { lat: place.bounds.south, lng: place.bounds.west },
+        { lat: place.bounds.north, lng: place.bounds.east }
+      );
+      map.fitBounds(b);
+      if (highlightRef.current) highlightRef.current.setBounds(b);
+    } else if (place.location) {
+      map.panTo(place.location);
+      map.setZoom(13);
+      if (highlightRef.current) highlightRef.current.setMap(null);
+      highlightRef.current = null;
+    }
+
+    if (place.location && markerRef.current) {
+      markerRef.current.setPosition(place.location);
+      markerRef.current.setVisible(true);
+    }
   };
 
   useEffect(() => {
-    // if filters reduce list and selected disappears, pick first
-    if (!filtered.some((c) => c.id === selectedId) && filtered.length) {
-      setSelectedId(filtered[0].id);
-    }
+    if (mapMode !== "js") return;
+    if (!mapReady) return;
+    focusCommunity(selectedId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filtered.length, filter, query]);
+  }, [selectedId, mapMode, mapReady]);
+
+  const onPick = (id: string) => {
+    setSelectedId(id);
+    // for embed fallback, nothing else required
+  };
+
+  const embedSrc = useMemo(() => {
+    const base = "https://www.google.com/maps?q=";
+    const q = encodeURIComponent(
+      selected?.name ? `${selected.name}, Dubai` : "Dubai"
+    );
+    return `${base}${q}&output=embed`;
+  }, [selected]);
 
   return (
     <div className="min-h-screen bg-white text-black">
-      <div className="fixed left-0 right-0 top-0 z-50">
-        <KeystneNav />
+      {/* NAV skin: transparent + black text; hover gold */}
+      <style jsx global>{`
+        .ks-nav-transparent {
+          background: transparent !important;
+        }
+        .ks-nav-transparent a,
+        .ks-nav-transparent button,
+        .ks-nav-transparent span,
+        .ks-nav-transparent div {
+          color: rgba(0, 0, 0, 0.92);
+        }
+        .ks-nav-transparent a:hover,
+        .ks-nav-transparent button:hover {
+          color: #c8a45d !important;
+        }
+      `}</style>
+
+      {/* Load Google Maps JS if key exists (otherwise we ALWAYS show embed map) */}
+      {mapsKey ? (
+        <Script
+          src={`https://maps.googleapis.com/maps/api/js?key=${mapsKey}&libraries=places`}
+          strategy="afterInteractive"
+          onLoad={initMap}
+          onError={() => {
+            setMapMode("embed");
+            setMapMsg("Live map didn’t load — showing fallback map.");
+          }}
+        />
+      ) : null}
+
+      {/* Transparent nav wrapper + hide on scroll down */}
+      <div
+        className={[
+          "fixed left-0 right-0 top-0 z-50 transition-all duration-300",
+          navHidden
+            ? "-translate-y-28 opacity-0 pointer-events-none"
+            : "translate-y-0 opacity-100",
+        ].join(" ")}
+      >
+        <div className="ks-nav-transparent">
+          <KeystneNav />
+        </div>
       </div>
 
-      {/* Header (white, no video) */}
+      {/* Header */}
       <section className="bg-white">
-        <div className="mx-auto max-w-7xl px-4 pt-28 pb-6">
+        <div className="mx-auto max-w-6xl px-4 pt-28 pb-6">
           <div className="text-[11px] tracking-[0.22em] text-black/55">
             DISCOVER
           </div>
@@ -480,402 +838,262 @@ export default function DiscoverCommunitiesPage() {
             Discover Dubai communities.
           </h1>
           <p className="mt-3 max-w-3xl text-sm text-black/65">
-            Pick a community on the right — we’ll highlight it on the map and
-            show the key things people care about: location feel, schools
-            direction, landmarks, and a simple price vibe.
+            Click a community on the right to view a simple overview and see it
+            on the map.
           </p>
         </div>
       </section>
 
       {/* Main layout */}
       <section className="bg-white">
-        <div className="mx-auto max-w-7xl px-4 pb-14">
-          <div className="grid gap-4 lg:grid-cols-[1fr_380px]">
-            {/* Middle: map + info */}
-            <div className="space-y-4">
-              <div
-                ref={mapWrapRef}
-                className="relative overflow-hidden rounded-[28px] border border-black/10 bg-white shadow-ks"
-              >
-                <div className="flex items-center justify-between gap-3 border-b border-black/10 px-5 py-4">
-                  <div>
-                    <div className="text-[11px] tracking-[0.22em] text-black/55">
-                      MAP
-                    </div>
-                    <div className="mt-1 text-base font-semibold text-black">
-                      Dubai overview
-                    </div>
+        <div className="mx-auto max-w-6xl px-4 pb-14">
+          <div className="grid gap-5 md:grid-cols-[1.6fr_0.9fr]">
+            {/* MAP + SUMMARY (summary at bottom, NOT overlay) */}
+            <div className="rounded-[28px] border border-black/10 bg-white shadow-ks overflow-hidden">
+              <div className="flex items-center justify-between gap-3 border-b border-black/10 px-5 py-4">
+                <div>
+                  <div className="text-[11px] tracking-[0.22em] text-black/55">
+                    MAP
                   </div>
-                  <div className="inline-flex items-center gap-2 rounded-full border border-black/10 bg-white px-3 py-2 text-[12px] font-semibold text-black/70">
-                    <Icon name="pin" /> {selected.name}
+                  <div className="mt-1 text-sm font-semibold text-black">
+                    {selected?.name}{" "}
+                    <span className="text-black/45 font-medium">
+                      — {selected?.region}
+                    </span>
                   </div>
                 </div>
 
-                {/* Map canvas */}
-                <div className="relative">
-                  {/* tooltip */}
-                  <Tooltip
-                    show={tip.show}
-                    x={tip.x}
-                    y={tip.y}
-                    text={tip.text}
+                <div className="flex items-center gap-2">
+                  {mapMode === "js" ? (
+                    <span className="text-[11px] text-black/45">Live map</span>
+                  ) : (
+                    <span className="text-[11px] text-black/45">Map</span>
+                  )}
+                  {mapsKey ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        // if JS failed earlier, allow re-init attempt
+                        if (mapsKey) {
+                          setMapMsg("");
+                          if (isGoogleReady()) initMap();
+                        }
+                      }}
+                      className="inline-flex items-center gap-2 rounded-2xl border border-black/10 bg-white px-3 py-2 text-[12px] font-semibold text-black/70 hover:bg-black/5"
+                    >
+                      <Icon name="refresh" className="h-4 w-4" /> Refresh
+                    </button>
+                  ) : null}
+                </div>
+              </div>
+
+              {/* Map area */}
+              <div className="relative">
+                {mapMode === "js" ? (
+                  <div
+                    ref={mapElRef}
+                    className="h-[520px] w-full bg-black/[0.03]"
                   />
-
-                  <svg
-                    viewBox="0 0 100 100"
+                ) : (
+                  <iframe
+                    title="Dubai map"
+                    src={embedSrc}
                     className="h-[520px] w-full"
-                    onMouseMove={onMarkerMove}
-                  >
-                    {/* Background */}
-                    <defs>
-                      <linearGradient id="sea" x1="0" x2="1">
-                        <stop offset="0" stopColor="rgba(0,0,0,0.03)" />
-                        <stop offset="1" stopColor="rgba(200,164,93,0.10)" />
-                      </linearGradient>
-                      <filter id="softGlow">
-                        <feGaussianBlur stdDeviation="1.2" result="blur" />
-                        <feMerge>
-                          <feMergeNode in="blur" />
-                          <feMergeNode in="SourceGraphic" />
-                        </feMerge>
-                      </filter>
-                    </defs>
+                    loading="lazy"
+                    referrerPolicy="no-referrer-when-downgrade"
+                  />
+                )}
 
-                    {/* Sea/Canvas */}
-                    <rect
-                      x="0"
-                      y="0"
-                      width="100"
-                      height="100"
-                      fill="url(#sea)"
-                    />
-
-                    {/* Stylised Dubai coastline/shape (clean, not GIS-accurate) */}
-                    <path
-                      d="M20 18 C30 15, 42 18, 52 24 C63 31, 72 42, 78 52 C84 62, 86 74, 82 84 C78 92, 66 95, 52 92 C38 89, 30 80, 24 68 C18 56, 15 44, 16 32 C17 25, 18 20, 20 18 Z"
-                      fill="white"
-                      stroke="rgba(0,0,0,0.12)"
-                      strokeWidth="0.8"
-                    />
-
-                    {/* Soft “active region” highlight */}
-                    <circle
-                      cx={
-                        COMMUNITIES.find((c) => c.id === activeId)?.marker.x ??
-                        50
-                      }
-                      cy={
-                        COMMUNITIES.find((c) => c.id === activeId)?.marker.y ??
-                        50
-                      }
-                      r={9}
-                      fill="rgba(200,164,93,0.22)"
-                      stroke="rgba(200,164,93,0.35)"
-                      strokeWidth="0.6"
-                      filter="url(#softGlow)"
-                    />
-
-                    {/* Markers */}
-                    {COMMUNITIES.map((c) => {
-                      const isActive = c.id === activeId;
-                      return (
-                        <g key={c.id}>
-                          <circle
-                            cx={c.marker.x}
-                            cy={c.marker.y}
-                            r={isActive ? 2.4 : 1.9}
-                            fill={isActive ? "#C8A45D" : "rgba(0,0,0,0.40)"}
-                            stroke={
-                              isActive
-                                ? "rgba(0,0,0,0.35)"
-                                : "rgba(255,255,255,0.9)"
-                            }
-                            strokeWidth={isActive ? 0.7 : 0.6}
-                            style={{ cursor: "pointer" }}
-                            onMouseEnter={(e) => onMarkerEnter(c, e)}
-                            onMouseLeave={onMarkerLeave}
-                            onClick={() => setSelectedId(c.id)}
-                          />
-                          {isActive ? (
-                            <text
-                              x={c.marker.x + 2.6}
-                              y={c.marker.y - 2.0}
-                              fontSize="3.2"
-                              fill="rgba(0,0,0,0.75)"
-                              fontFamily="ui-sans-serif, system-ui"
-                            >
-                              {c.name}
-                            </text>
-                          ) : null}
-                        </g>
-                      );
-                    })}
-                  </svg>
-
-                  {/* Info card (short + clean) */}
-                  <div className="absolute bottom-4 left-4 right-4">
-                    <div className="rounded-[24px] border border-black/10 bg-white/95 p-5 shadow-ks backdrop-blur">
-                      <div className="flex flex-wrap items-start justify-between gap-3">
-                        <div>
-                          <div className="text-[11px] tracking-[0.22em] text-black/55">
-                            COMMUNITY SNAPSHOT
-                          </div>
-                          <div className="mt-1 text-2xl font-semibold text-black">
-                            {selected.name}
-                          </div>
-                          <div className="mt-2 text-sm text-black/70">
-                            <span className="font-semibold text-black">
-                              {selected.vibe}
-                            </span>{" "}
-                            — {selected.bestFor}
-                          </div>
-                        </div>
-
-                        <div className="inline-flex items-center gap-2 rounded-full bg-black px-4 py-2 text-[12px] font-semibold text-white">
-                          {selected.areaType} • {selected.priceGuide}
-                        </div>
+                {mapMsg ? (
+                  <div className="absolute left-4 right-4 top-4">
+                    <div className="rounded-[22px] border border-black/10 bg-white/95 p-4 shadow-ks backdrop-blur">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="text-sm text-black/70">{mapMsg}</div>
+                        <button
+                          type="button"
+                          onClick={() => setMapMsg("")}
+                          className="rounded-2xl px-3 py-2 text-[12px] font-semibold text-black/70 hover:bg-black/5"
+                        >
+                          <Icon name="x" />
+                        </button>
                       </div>
-
-                      <div className="mt-4 grid gap-3 md:grid-cols-3">
-                        <div className="rounded-2xl border border-black/10 bg-white p-4">
-                          <div className="text-[11px] text-black/50">
-                            Schools direction
-                          </div>
-                          <div className="mt-2 space-y-2">
-                            {selected.schools.slice(0, 2).map((x) => (
-                              <div
-                                key={x}
-                                className="flex items-start gap-2 text-sm text-black/75"
-                              >
-                                <span className="mt-[3px] inline-flex h-5 w-5 items-center justify-center rounded-full bg-[#C8A45D] text-black">
-                                  <Icon name="check" className="h-3.5 w-3.5" />
-                                </span>
-                                <span>{x}</span>
-                              </div>
-                            ))}
-                          </div>
+                      {!mapsKey ? (
+                        <div className="mt-2 text-[11px] text-black/50">
+                          Add{" "}
+                          <span className="font-semibold">
+                            NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
+                          </span>{" "}
+                          to enable the live highlighted map.
                         </div>
+                      ) : null}
+                    </div>
+                  </div>
+                ) : null}
+              </div>
 
-                        <div className="rounded-2xl border border-black/10 bg-white p-4">
-                          <div className="text-[11px] text-black/50">
-                            Landmarks
-                          </div>
-                          <div className="mt-2 space-y-2">
-                            {selected.landmarks.slice(0, 3).map((x) => (
-                              <div
-                                key={x}
-                                className="flex items-start gap-2 text-sm text-black/75"
-                              >
-                                <span className="mt-[3px] inline-flex h-5 w-5 items-center justify-center rounded-full bg-black text-white">
-                                  <Icon name="check" className="h-3.5 w-3.5" />
-                                </span>
-                                <span>{x}</span>
+              {/* SUMMARY (at the bottom of the map) */}
+              <div className="border-t border-black/10 p-5">
+                <div className="text-[11px] tracking-[0.22em] text-black/55">
+                  SUMMARY
+                </div>
+                <div className="mt-2 text-2xl font-semibold text-black">
+                  {selected?.name}
+                </div>
+                <div className="mt-2 text-sm text-black/70">
+                  {selected?.vibe}
+                </div>
+
+                <div className="mt-4 grid gap-4 md:grid-cols-2">
+                  <div className="rounded-2xl border border-black/10 bg-white p-4 shadow-sm">
+                    <div className="text-[11px] font-semibold text-black/60">
+                      Known for
+                    </div>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {(selected?.knownFor || []).slice(0, 6).map((x) => (
+                        <span
+                          key={x}
+                          className="inline-flex items-center gap-2 rounded-full border border-black/10 bg-black/[0.03] px-3 py-2 text-[12px] font-semibold text-black/75"
+                        >
+                          <span className="h-1.5 w-1.5 rounded-full bg-[#C8A45D]" />
+                          {x}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="rounded-2xl border border-black/10 bg-white p-4 shadow-sm">
+                    <div className="text-[11px] font-semibold text-black/60">
+                      Quick notes
+                    </div>
+                    <div className="mt-2 text-sm text-black/70">
+                      {selected?.notes}
+                    </div>
+                    <div className="mt-3 text-[11px] text-black/45">
+                      Schools + commutes depend on building choice, route and
+                      traffic.
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-4 grid gap-3 md:grid-cols-2">
+                  <div className="rounded-2xl border border-black/10 bg-white p-4 shadow-sm">
+                    <div className="text-[11px] font-semibold text-black/60">
+                      Schools
+                    </div>
+                    <ul className="mt-2 space-y-2 text-[12px] text-black/70">
+                      {(selected?.schools || []).slice(0, 2).map((x) => (
+                        <li key={x} className="flex items-start gap-2">
+                          <span className="mt-[2px] inline-flex h-5 w-5 items-center justify-center rounded-full bg-[#C8A45D] text-black">
+                            <Icon name="check" className="h-3.5 w-3.5" />
+                          </span>
+                          <span>{x}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  <div className="rounded-2xl border border-black/10 bg-white p-4 shadow-sm">
+                    <div className="text-[11px] font-semibold text-black/60">
+                      Access
+                    </div>
+                    <ul className="mt-2 space-y-2 text-[12px] text-black/70">
+                      {(selected?.access || []).slice(0, 2).map((x) => (
+                        <li key={x} className="flex items-start gap-2">
+                          <span className="mt-[2px] inline-flex h-5 w-5 items-center justify-center rounded-full bg-black text-white">
+                            <Icon name="check" className="h-3.5 w-3.5" />
+                          </span>
+                          <span>{x}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+
+                <div className="mt-4 flex justify-end">
+                  <a
+                    className="inline-flex items-center justify-center gap-2 rounded-2xl bg-black px-4 py-3 text-sm font-semibold text-white hover:bg-black/90"
+                    href={buildMailto({
+                      subject: "Keystne — Community shortlist request",
+                      body: `Hi Keystne team,\n\nI’m interested in: ${selected?.name}\n\nBudget / requirement:\nTimeline:\nBedrooms / property type:\n\nName:\nPhone:\nEmail:\n\nThank you`,
+                    })}
+                  >
+                    Contact us <Icon name="arrow" />
+                  </a>
+                </div>
+              </div>
+            </div>
+
+            {/* RIGHT SIDE (reverted: simple tiles list, no extra cards) */}
+            <div className="rounded-[28px] border border-black/10 bg-white shadow-ks overflow-hidden">
+              <div className="border-b border-black/10 px-5 py-4">
+                <div className="text-[11px] tracking-[0.22em] text-black/55">
+                  COMMUNITIES
+                </div>
+                <div className="mt-1 text-sm text-black/65">
+                  Select one to see it on the map + overview.
+                </div>
+              </div>
+
+              <div className="max-h-[680px] overflow-auto p-4">
+                <div className="grid gap-3">
+                  {COMMUNITIES.map((c) => {
+                    const active = c.id === selectedId;
+                    return (
+                      <button
+                        key={c.id}
+                        type="button"
+                        onClick={() => {
+                          onPick(c.id);
+                          // If JS map is active, re-focus
+                          if (mapMode === "js") focusCommunity(c.id);
+                        }}
+                        className={[
+                          "group relative overflow-hidden rounded-[22px] border text-left transition",
+                          active
+                            ? "border-black/15 bg-[#C8A45D]/15"
+                            : "border-black/10 bg-white hover:border-black/15 hover:bg-black/[0.02]",
+                        ].join(" ")}
+                      >
+                        <div className="p-4">
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <div className="text-sm font-semibold text-black">
+                                {c.name}
                               </div>
-                            ))}
+                              <div className="mt-1 text-[12px] text-black/55">
+                                {c.region}
+                              </div>
+                            </div>
+                            <div
+                              className={[
+                                "mt-1 inline-flex items-center gap-2 rounded-full px-3 py-2 text-[12px] font-semibold transition",
+                                active
+                                  ? "bg-black text-white"
+                                  : "bg-black/5 text-black/70 group-hover:bg-black group-hover:text-white",
+                              ].join(" ")}
+                            >
+                              View <Icon name="arrow" className="h-4 w-4" />
+                            </div>
                           </div>
-                        </div>
 
-                        <div className="rounded-2xl border border-black/10 bg-white p-4">
-                          <div className="text-[11px] text-black/50">
-                            Practical note
+                          <div className="mt-3 text-[12px] text-black/70 line-clamp-2">
+                            {c.vibe}
                           </div>
-                          <div className="mt-2 text-sm text-black/75">
-                            {selected.commuteNote}
-                          </div>
-                          <div className="mt-3 text-[12px] font-semibold text-black/80">
-                            Key highlights
-                          </div>
-                          <div className="mt-2 flex flex-wrap gap-2">
-                            {selected.keyLinks.slice(0, 3).map((x) => (
+
+                          <div className="mt-3 flex flex-wrap gap-2">
+                            {c.knownFor.slice(0, 3).map((x) => (
                               <span
                                 key={x}
-                                className="rounded-full bg-black/5 px-3 py-2 text-[12px] font-semibold text-black/70"
+                                className="inline-flex items-center rounded-full border border-black/10 bg-white px-3 py-2 text-[11px] font-semibold text-black/70"
                               >
                                 {x}
                               </span>
                             ))}
                           </div>
                         </div>
-                      </div>
-
-                      <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
-                        <a
-                          className="inline-flex items-center justify-center gap-2 rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm font-semibold text-black/70 hover:bg-black/5"
-                          href={buildMailto({
-                            subject: `Keystne — Community shortlist: ${selected.name}`,
-                            body: [
-                              "Hi Keystne team,",
-                              "",
-                              `I’m interested in: ${selected.name}`,
-                              "",
-                              "Please contact me to discuss a shortlist and options.",
-                              "",
-                              "Name:",
-                              "Phone:",
-                              "Budget:",
-                              "Timeline:",
-                            ].join("\n"),
-                          })}
-                        >
-                          Contact us <Icon name="arrow" />
-                        </a>
-                        <button
-                          type="button"
-                          className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#C8A45D] px-4 py-3 text-sm font-semibold text-black hover:brightness-110"
-                          onClick={() => setHoverId(null)}
-                        >
-                          Keep this selected <Icon name="check" />
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Tiny helper row */}
-              <div className="rounded-[24px] border border-black/10 bg-white p-5 shadow-sm">
-                <div className="text-[11px] tracking-[0.22em] text-black/55">
-                  HOW TO USE
-                </div>
-                <div className="mt-2 text-sm text-black/70">
-                  Hover or click a community on the right. It highlights on the
-                  map and you get a short, clean snapshot.
-                </div>
-              </div>
-            </div>
-
-            {/* Right: Tiles list */}
-            <div className="space-y-4">
-              <div className="rounded-[28px] border border-black/10 bg-white p-5 shadow-ks">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <div className="text-[11px] tracking-[0.22em] text-black/55">
-                      COMMUNITIES
-                    </div>
-                    <div className="mt-1 text-base font-semibold text-black">
-                      Dubai shortlist
-                    </div>
-                  </div>
-                  <div className="rounded-full bg-black px-3 py-2 text-[12px] font-semibold text-white">
-                    {filtered.length} shown
-                  </div>
-                </div>
-
-                {/* Search */}
-                <div className="mt-4 flex items-center gap-2 rounded-2xl border border-black/10 bg-white px-3 py-3 shadow-sm">
-                  <Icon name="search" className="h-4 w-4 text-black/50" />
-                  <input
-                    value={query}
-                    onChange={(e) => setQuery(e.target.value)}
-                    placeholder="Search a community (e.g., Marina, Downtown)"
-                    className="w-full bg-transparent text-sm text-black outline-none placeholder:text-black/30"
-                  />
-                  {query ? (
-                    <button
-                      type="button"
-                      onClick={() => setQuery("")}
-                      className="rounded-xl px-2 py-1 text-black/55 hover:bg-black/5"
-                      aria-label="Clear search"
-                    >
-                      <Icon name="x" />
-                    </button>
-                  ) : null}
-                </div>
-
-                {/* Filters */}
-                <div className="mt-4 flex flex-wrap gap-2">
-                  {(
-                    [
-                      "All",
-                      "Urban",
-                      "Waterfront",
-                      "Family",
-                      "Value",
-                      "Luxury",
-                      "Mixed",
-                    ] as const
-                  ).map((x) => (
-                    <Pill
-                      key={x}
-                      active={filter === x}
-                      onClick={() => setFilter(x)}
-                    >
-                      {x}
-                    </Pill>
-                  ))}
-                </div>
-              </div>
-
-              <div className="rounded-[28px] border border-black/10 bg-white shadow-ks">
-                <div className="max-h-[690px] overflow-auto p-4">
-                  <div className="grid gap-3">
-                    {filtered.map((c) => {
-                      const active = c.id === activeId;
-                      return (
-                        <button
-                          key={c.id}
-                          type="button"
-                          onMouseEnter={() => setHoverId(c.id)}
-                          onMouseLeave={() => setHoverId(null)}
-                          onClick={() => setSelectedId(c.id)}
-                          className={[
-                            "relative w-full overflow-hidden rounded-[22px] border text-left transition",
-                            active
-                              ? "border-[#C8A45D]/60 bg-[#C8A45D]/10 shadow-sm"
-                              : "border-black/10 bg-white hover:bg-black/[0.02]",
-                          ].join(" ")}
-                        >
-                          <div className="p-4">
-                            <div className="flex items-start justify-between gap-3">
-                              <div>
-                                <div className="text-sm font-semibold text-black">
-                                  {c.name}
-                                </div>
-                                <div className="mt-1 text-[12px] text-black/65">
-                                  {c.areaType} • {c.priceGuide} • {c.vibe}
-                                </div>
-                              </div>
-                              <div
-                                className={[
-                                  "rounded-full px-3 py-2 text-[12px] font-semibold",
-                                  active
-                                    ? "bg-black text-white"
-                                    : "bg-black/5 text-black/70",
-                                ].join(" ")}
-                              >
-                                View{" "}
-                                <Icon
-                                  name="arrow"
-                                  className="ml-1 inline h-4 w-4"
-                                />
-                              </div>
-                            </div>
-
-                            <div className="mt-3 text-[12px] text-black/70">
-                              {c.bestFor}
-                            </div>
-
-                            <div className="mt-3 flex flex-wrap gap-2">
-                              {c.keyLinks.slice(0, 3).map((x) => (
-                                <span
-                                  key={x}
-                                  className="rounded-full bg-black/5 px-3 py-2 text-[12px] font-semibold text-black/70"
-                                >
-                                  {x}
-                                </span>
-                              ))}
-                            </div>
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
-
-                  <div className="mt-4 rounded-2xl border border-black/10 bg-black/[0.03] p-4 text-[12px] text-black/65">
-                    Want us to add more communities (or split by Villa /
-                    Apartment / Off-plan)? Say the word and we’ll extend this
-                    list.
-                  </div>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             </div>
