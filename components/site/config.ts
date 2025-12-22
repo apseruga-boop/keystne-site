@@ -14,47 +14,28 @@ export const HOME_VIDEOS = {
     "https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4",
   investments:
     "https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4",
-  leasing:
+  longterm:
     "https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4",
   management:
     "https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4",
 };
 
-/**
- * Keep this export because your concierge route expects it.
- * We'll refine / reorder later using real Dubai community structure.
- */
+// Keep these exported so other pages never break builds.
 export const DUBAI_AREAS = [
   "Downtown Dubai",
   "Dubai Marina",
   "Business Bay",
   "Palm Jumeirah",
-  "Jumeirah Beach Residence (JBR)",
-  "Jumeirah Lake Towers (JLT)",
+  "JBR",
+  "JLT",
   "Dubai Hills Estate",
-  "Arabian Ranches",
-  "Jumeirah Village Circle (JVC)",
+  "JVC",
   "Dubai Creek Harbour",
   "City Walk",
-  "Al Barsha",
-  "The Springs",
-  "The Meadows",
-  "Emirates Hills",
-  "Dubai Silicon Oasis",
-  "Mirdif",
-  "Motor City",
 ];
 
-/**
- * Keep this export because some pages you pasted earlier referenced MEDIA.
- * We can swap these URLs later to your licensed videos.
- */
 export const MEDIA = {
-  hero: HOME_VIDEOS.hero,
-  concierge: HOME_VIDEOS.concierge,
-  investments: HOME_VIDEOS.investments,
-  leasing: HOME_VIDEOS.leasing,
-  management: HOME_VIDEOS.management,
+  placeholder: true,
 };
 
 export const SERVICES = [
@@ -62,7 +43,7 @@ export const SERVICES = [
     key: "concierge",
     title: "Concierge",
     sentence:
-      "A personal, end-to-end journey — from viewing trips to owning your Dubai home.",
+      "A personal end-to-end journey — from travel and viewings to purchase and settling in.",
     href: "/concierge",
     video: HOME_VIDEOS.concierge,
   },
@@ -70,24 +51,24 @@ export const SERVICES = [
     key: "investments",
     title: "Brokerage & Investments",
     sentence:
-      "Expert guidance, market insight, and seamless execution — built for serious buyers.",
+      "Off-plan to secondary — guided with market insight and a seamless buying process.",
     href: "/investments",
     video: HOME_VIDEOS.investments,
   },
   {
-    key: "rentals",
-    title: "Long term rentals",
+    key: "longterm",
+    title: "Long-Term Rentals",
     sentence:
-      "Trusted leasing support and guidance for living in Dubai with confidence.",
-    href: "/leasing",
-    video: HOME_VIDEOS.leasing,
+      "Long-stay leasing made simple — area guidance, screening, and rental support.",
+    href: "/long-term",
+    video: HOME_VIDEOS.longterm,
   },
   {
     key: "management",
-    title: "Property management",
+    title: "Property Management",
     sentence:
-      "We protect performance, handle operations, and keep ownership effortless.",
-    href: "/management",
+      "Hands-on management and performance oversight — you relax, we handle the detail.",
+    href: "/property-management",
     video: HOME_VIDEOS.management,
   },
 ] as const;

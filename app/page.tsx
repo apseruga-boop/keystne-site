@@ -18,96 +18,139 @@ function mailtoFor(reason: string) {
   return `mailto:${to}?cc=${cc}&subject=${subject}&body=${body}`;
 }
 
-/** Simple inline SVG icons (NO lucide-react) */
-function Icon({ children }: { children: React.ReactNode }) {
-  return (
-    <span className="inline-flex h-9 w-9 items-center justify-center rounded-2xl ks-icon-chip">
-      {children}
-    </span>
-  );
-}
+/** Dubai time + weather (no box, premium, white, visible) */
+function DubaiWeatherBadge({
+  mode,
+  targetRef,
+}: {
+  mode: "topLeft" | "servicesCenter";
+  targetRef: React.RefObject<HTMLDivElement>;
+}) {
+  const badgeRef = useRef<HTMLDivElement | null>(null);
+  const [pos, setPos] = useState<{ left: number; top: number } | null>(null);
 
-function IPhone() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-      <path
-        d="M8 4h8a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z"
-        stroke="rgba(200,164,93,1)"
-        strokeWidth="1.6"
-      />
-      <path
-        d="M10 7h4"
-        stroke="rgba(255,255,255,0.85)"
-        strokeWidth="1.6"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
-}
+  const [now, setNow] = useState(new Date());
+  const [tempC, setTempC] = useState<number | null>(null);
+  const [code, setCode] = useState<number | null>(null);
 
-function IWhatsapp() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-      <path
-        d="M20 12a8 8 0 0 1-12.9 6.2L4 20l1.9-3.1A8 8 0 1 1 20 12Z"
-        stroke="rgba(255,255,255,0.85)"
-        strokeWidth="1.6"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M9.2 9.4c.2-.6.6-.7 1-.5l.7.5c.3.2.4.5.3.8l-.2.6c-.1.3 0 .6.2.9.6.8 1.3 1.5 2.1 2.1.3.2.6.3.9.2l.6-.2c.3-.1.6 0 .8.3l.5.7c.2.4.1.8-.5 1-.7.4-1.6.3-2.7-.2-1.4-.7-3-2.3-3.7-3.7-.5-1.1-.6-2-.2-2.7Z"
-        fill="rgba(34,197,94,0.95)"
-      />
-    </svg>
-  );
-}
+  // Time tick
+  useEffect(() => {
+    const t = setInterval(() => setNow(new Date()), 30_000);
+    return () => clearInterval(t);
+  }, []);
 
-function ITelegram() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-      <path
-        d="M21 5 3.7 11.9c-.8.3-.8 1.5.1 1.8l4.3 1.4 1.7 5c.3.9 1.5 1 2 .2l2.6-3.5 4.6 3.4c.7.5 1.8.1 2-.8L22 6.3c.2-.9-.6-1.6-1.5-1.3Z"
-        fill="rgba(59,130,246,0.95)"
-      />
-    </svg>
-  );
-}
+  // Weather (Open-Meteo, no key)
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      try {
+        // Dubai coords
+        const url =
+          "https://api.open-meteo.com/v1/forecast?latitude=25.2048&longitude=55.2708&current=temperature_2m,weather_code&timezone=Asia%2FDubai";
+        const res = await fetch(url);
+        const json = await res.json();
+        if (cancelled) return;
+        setTempC(json?.current?.temperature_2m ?? null);
+        setCode(json?.current?.weather_code ?? null);
+      } catch {
+        // silent
+      }
+    }
+    load();
+    const r = setInterval(load, 10 * 60_000);
+    return () => {
+      cancelled = true;
+      clearInterval(r);
+    };
+  }, []);
 
-function ICalendar() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-      <path
-        d="M7 3v3M17 3v3"
-        stroke="rgba(255,255,255,0.85)"
-        strokeWidth="1.6"
-        strokeLinecap="round"
-      />
-      <path
-        d="M5 7h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2Z"
-        stroke="rgba(200,164,93,1)"
-        strokeWidth="1.6"
-      />
-      <path
-        d="M7 11h4"
-        stroke="rgba(255,255,255,0.85)"
-        strokeWidth="1.6"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
-}
+  const fmtDate = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Asia/Dubai",
+    weekday: "short",
+    day: "2-digit",
+    month: "short",
+  }).format(now);
 
-function IMail() {
+  const fmtTime = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Asia/Dubai",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(now);
+
+  function weatherIcon(w: number | null) {
+    // Minimal mapping (premium + clear)
+    if (w == null) return "•";
+    // 0 clear, 1-3 mainly clear/partly, 45/48 fog, 51-67 drizzle/rain, 71-77 snow, 80-82 showers, 95-99 thunder
+    if (w === 0) return "☀︎";
+    if (w >= 1 && w <= 3) return "⛅︎";
+    if (w === 45 || w === 48) return "☁︎";
+    if ((w >= 51 && w <= 67) || (w >= 80 && w <= 82)) return "☂︎";
+    if (w >= 95 && w <= 99) return "⚡︎";
+    return "☁︎";
+  }
+
+  // Dynamic move: top-left -> under Services header center
+  useEffect(() => {
+    function compute() {
+      const badge = badgeRef.current;
+      if (!badge) return;
+
+      if (mode === "topLeft") {
+        setPos({ left: 24, top: 90 });
+        return;
+      }
+
+      const target = targetRef.current;
+      if (!target) return;
+
+      const rect = target.getBoundingClientRect();
+      const bw = badge.offsetWidth;
+      const left = Math.max(12, rect.left + rect.width / 2 - bw / 2);
+      const top = Math.max(12, rect.top + 12);
+      setPos({ left, top });
+    }
+
+    compute();
+    const onScroll = () => requestAnimationFrame(compute);
+    const onResize = () => requestAnimationFrame(compute);
+
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onResize);
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onResize);
+    };
+  }, [mode, targetRef]);
+
   return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-      <path d="M4 7h16v10H4V7Z" stroke="rgba(200,164,93,1)" strokeWidth="1.6" />
-      <path
-        d="m4 8 8 6 8-6"
-        stroke="rgba(255,255,255,0.85)"
-        strokeWidth="1.6"
-        strokeLinejoin="round"
-      />
-    </svg>
+    <div
+      ref={badgeRef}
+      style={{
+        position: "fixed",
+        left: pos?.left ?? 24,
+        top: pos?.top ?? 90,
+        zIndex: 60,
+        transition: "left 500ms ease, top 500ms ease, transform 500ms ease",
+        transform: mode === "servicesCenter" ? "scale(1.12)" : "scale(1)",
+      }}
+      className="select-none text-white"
+    >
+      <div className="flex items-center gap-3">
+        <div className="text-xl leading-none">{weatherIcon(code)}</div>
+        <div className="leading-tight">
+          <div className="text-[12px] tracking-[0.18em] text-white/80">
+            DUBAI
+          </div>
+          <div className="text-sm font-semibold">
+            {fmtTime}{" "}
+            <span className="text-white/65">
+              • {fmtDate}
+              {tempC == null ? "" : ` • ${Math.round(tempC)}°C`}
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -127,11 +170,12 @@ function VideoTile({
   return (
     <Link
       href={href}
-      className="group relative block h-[520px] overflow-hidden rounded-[28px] border border-white/10 bg-black shadow-ks"
+      className="group relative block h-[460px] overflow-hidden border border-white/10 bg-black shadow-ks"
       onMouseEnter={() => vidRef.current?.play().catch(() => undefined)}
       onMouseLeave={() => vidRef.current?.pause()}
       onFocus={() => vidRef.current?.play().catch(() => undefined)}
       onBlur={() => vidRef.current?.pause()}
+      style={{ borderRadius: "0px" }}
     >
       <video
         ref={vidRef}
@@ -141,25 +185,14 @@ function VideoTile({
         loop
         playsInline
       />
-      <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-black/30 to-black/85" />
+      <div className="absolute inset-0 bg-gradient-to-b from-black/25 via-black/35 to-black/85" />
 
-      {/* Vertical title strip (keep) */}
-      <div className="absolute left-6 top-6 flex h-[calc(100%-48px)] items-center">
-        <div className="flex flex-col items-center justify-center gap-3">
-          <div className="h-10 w-[1px] bg-white/25" />
-          <div className="rotate-180 text-[11px] tracking-[0.35em] text-white/70 [writing-mode:vertical-rl]">
-            {title.toUpperCase()}
-          </div>
-          <div className="h-10 w-[1px] bg-white/25" />
-        </div>
-      </div>
-
-      <div className="relative flex h-full flex-col justify-end p-7 pl-16">
-        {/* Removed the small “KEYSTNE” line (per your instruction) */}
-        <div className="text-3xl font-semibold text-white">{title}</div>
+      {/* Removed the left vertical strip (per instruction) */}
+      <div className="relative flex h-full flex-col justify-end p-7">
+        <div className="mt-2 text-3xl font-semibold text-white">{title}</div>
         <div className="mt-3 max-w-md text-sm text-white/70">{sentence}</div>
 
-        <div className="mt-7 inline-flex items-center gap-2 text-sm text-white">
+        <div className="mt-6 inline-flex items-center gap-2 text-sm text-white">
           Explore{" "}
           <span className="transition group-hover:translate-x-1">→</span>
         </div>
@@ -169,75 +202,53 @@ function VideoTile({
 }
 
 function ContactDock() {
-  const mail = useMemo(() => mailtoFor("General enquiry"), []);
-
   return (
     <div
       id="contact"
-      className="fixed bottom-5 right-5 z-40 w-[220px] overflow-hidden rounded-[22px] border border-white/10 bg-black/70 shadow-ks backdrop-blur-xl"
+      className="fixed bottom-5 right-5 z-50 w-[240px] overflow-hidden rounded-[22px] border border-black/10 bg-white/90 shadow-ks backdrop-blur-xl"
     >
       <div className="p-2">
-        {/* WhatsApp primary (more visible) */}
         <a
-          className="flex items-center justify-center gap-2 rounded-2xl px-3 py-3 text-[12px] font-medium ks-btn-gold"
+          className="ks-btn-gold ks-gold-ring flex items-center justify-center rounded-2xl bg-black px-3 py-3 text-[12px] font-semibold text-white hover:bg-black/90"
           href={CONTACT.whatsappLink}
           target="_blank"
           rel="noreferrer"
         >
-          <span className="inline-flex h-2 w-2 rounded-full bg-green-400" />
-          WhatsApp us
+          WhatsApp
         </a>
 
         <div className="mt-2 grid gap-1">
           <a
-            className="flex items-center gap-2 rounded-2xl px-3 py-2 text-[12px] text-white/85 hover:bg-white/5"
+            className="rounded-2xl px-3 py-2 text-[12px] font-semibold text-black/80 hover:bg-black/5"
             href={CONTACT.phoneTel}
           >
-            <Icon>
-              <IPhone />
-            </Icon>
             Call
           </a>
-
           <a
-            className="flex items-center gap-2 rounded-2xl px-3 py-2 text-[12px] text-white/85 hover:bg-white/5"
+            className="rounded-2xl px-3 py-2 text-[12px] font-semibold text-black/80 hover:bg-black/5"
             href={CONTACT.telegramLink}
             target="_blank"
             rel="noreferrer"
           >
-            <Icon>
-              <ITelegram />
-            </Icon>
             Telegram
           </a>
-
           <a
-            className="flex items-center gap-2 rounded-2xl px-3 py-2 text-[12px] text-white/85 hover:bg-white/5"
-            href={mail}
+            className="rounded-2xl px-3 py-2 text-[12px] font-semibold text-black/80 hover:bg-black/5"
+            href={mailtoFor("General enquiry")}
           >
-            <Icon>
-              <IMail />
-            </Icon>
             Email
           </a>
 
-          <div className="flex items-center gap-2 rounded-2xl px-3 py-2 text-[11px] text-white/65">
-            <Icon>
-              <ICalendar />
-            </Icon>
-            Book a call (next)
-          </div>
-
-          <div className="rounded-2xl px-3 py-2 text-[11px] text-white/55">
+          <div className="rounded-2xl px-3 py-2 text-[11px] text-black/55">
             {CONTACT.wechatText}
           </div>
         </div>
 
-        <div className="mt-3 rounded-2xl border border-white/10 bg-black/55 px-3 py-3">
-          <div className="text-[10px] tracking-[0.22em] text-white/55">
+        <div className="mt-3 rounded-2xl border border-black/10 bg-white px-3 py-3">
+          <div className="text-[10px] tracking-[0.22em] text-black/55">
             DIRECT
           </div>
-          <div className="mt-1 text-sm font-semibold text-white">
+          <div className="mt-1 text-sm font-semibold text-black">
             {CONTACT.phoneDisplay}
           </div>
         </div>
@@ -248,6 +259,7 @@ function ContactDock() {
 
 export default function HomePage() {
   const [hideHeroBox, setHideHeroBox] = useState(false);
+  const servicesHeaderRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     const onScroll = () => setHideHeroBox(window.scrollY > 30);
@@ -259,8 +271,14 @@ export default function HomePage() {
   const heroMail = useMemo(() => mailtoFor("Concierge (Relocation)"), []);
 
   return (
-    <div className="min-h-screen bg-[var(--ks-black)] text-white">
+    <div className="min-h-screen bg-ksBlack text-ksWhite">
       <KeystneNav />
+
+      {/* Weather badge: moves when hero box disappears */}
+      <DubaiWeatherBadge
+        mode={hideHeroBox ? "servicesCenter" : "topLeft"}
+        targetRef={servicesHeaderRef}
+      />
 
       {/* HERO */}
       <section className="relative min-h-[92vh] overflow-hidden">
@@ -272,20 +290,18 @@ export default function HomePage() {
           loop
           playsInline
         />
-        <div className="absolute inset-0 bg-gradient-to-b from-black/75 via-black/25 to-[var(--ks-black)]" />
+        <div className="absolute inset-0 bg-gradient-to-b from-black/75 via-black/25 to-ksBlack" />
 
         <div className="relative mx-auto flex min-h-[92vh] max-w-6xl flex-col justify-end px-4 pb-14 pt-28">
-          {/* Transparent hero box that disappears on scroll */}
           <div
             className={[
-              "ks-glass rounded-[28px] p-8 shadow-ks transition",
+              "ks-glass ks-fade-up rounded-[28px] p-8 shadow-ks transition",
               hideHeroBox
                 ? "pointer-events-none translate-y-2 opacity-0"
                 : "opacity-100",
             ].join(" ")}
           >
-            {/* keystne.dubai lowercase */}
-            <div className="text-[11px] tracking-[0.22em] text-white/70">
+            <div className="text-[11px] tracking-[0.22em] text-white/55">
               keystne.dubai
             </div>
 
@@ -299,25 +315,25 @@ export default function HomePage() {
               seamless, personal experience for every client.
             </p>
 
-            {/* Buttons more visible */}
+            {/* Buttons visible (not black on black) */}
             <div className="mt-7 flex flex-col gap-3 sm:flex-row">
               <a
                 href={heroMail}
-                className="inline-flex items-center justify-center rounded-2xl px-6 py-4 text-sm ks-btn-gold"
+                className="ks-btn-gold ks-gold-ring inline-flex items-center justify-center rounded-2xl bg-white/15 px-6 py-4 text-sm font-semibold text-white hover:bg-white/20"
               >
                 Start with concierge →
               </a>
 
               <Link
                 href="/communities"
-                className="inline-flex items-center justify-center rounded-2xl px-6 py-4 text-sm ks-btn-ghost"
+                className="inline-flex items-center justify-center rounded-2xl border border-white/20 bg-white/10 px-6 py-4 text-sm font-semibold text-white hover:bg-white/15"
               >
                 Discover Dubai communities
               </Link>
 
               <Link
                 href="/about"
-                className="inline-flex items-center justify-center rounded-2xl px-6 py-4 text-sm ks-btn-ghost"
+                className="inline-flex items-center justify-center rounded-2xl border border-white/20 bg-white/10 px-6 py-4 text-sm font-semibold text-white hover:bg-white/15"
               >
                 About us
               </Link>
@@ -326,9 +342,12 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* SERVICES (moved up closer to hero) */}
-      <section className="bg-[var(--ks-black)] -mt-6">
-        <div className="mx-auto max-w-6xl px-4 pb-16 pt-10">
+      {/* SERVICES */}
+      <section className="bg-ksBlack">
+        <div className="mx-auto max-w-6xl px-4 py-12">
+          {/* Target position for weather badge when it moves */}
+          <div ref={servicesHeaderRef} className="pt-2" />
+
           <div className="text-[11px] tracking-[0.22em] text-white/55">
             SERVICES
           </div>
@@ -336,8 +355,8 @@ export default function HomePage() {
             Four pillars. One premium standard.
           </h2>
 
-          {/* Dior-like row */}
-          <div className="mt-10 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          {/* Tiles MUST touch: gap-0, grid columns 4 on desktop */}
+          <div className="mt-8 grid gap-0 overflow-hidden rounded-[18px] border border-white/10 md:grid-cols-4">
             {SERVICES.map((s) => (
               <VideoTile
                 key={s.key}
