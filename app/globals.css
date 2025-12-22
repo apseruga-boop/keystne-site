@@ -4,96 +4,49 @@
 
 :root {
   --ks-black: #0b0b0b;
+  --ks-white: #ffffff;
   --ks-gold: #c8a45d;
-  --ks-white: #f7f3ea;
 }
 
 html,
 body {
   height: 100%;
   background: var(--ks-black);
+  color: var(--ks-white);
 }
 
-* {
-  -webkit-tap-highlight-color: transparent;
-}
-
-@keyframes ksFadeUp {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes ksShimmer {
-  0% {
-    transform: translateX(-40%);
-    opacity: 0;
-  }
-  10% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 1;
-  }
-  90% {
-    opacity: 0.2;
-  }
-  100% {
-    transform: translateX(140%);
-    opacity: 0;
-  }
-}
-
-.ks-fade-up {
-  animation: ksFadeUp 700ms ease-out both;
+/* Small premium helpers */
+.shadow-ks {
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.55);
 }
 
 .ks-glass {
-  background: rgba(255, 255, 255, 0.06);
+  background: rgba(0, 0, 0, 0.35);
   border: 1px solid rgba(255, 255, 255, 0.12);
-  backdrop-filter: blur(18px);
-}
-
-.ks-gold-ring {
-  border: 1px solid rgba(200, 164, 93, 0.55);
-}
-
-.ks-gold-glow {
-  box-shadow: 0 0 0 1px rgba(200, 164, 93, 0.25),
-    0 18px 60px rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(14px);
 }
 
 .ks-btn-gold {
-  position: relative;
-  overflow: hidden;
+  background: var(--ks-gold);
+  color: #0b0b0b;
+  border: 1px solid rgba(255, 255, 255, 0.14);
 }
 
-.ks-btn-gold::after {
-  content: "";
-  position: absolute;
-  top: -40%;
-  left: -60%;
-  width: 60%;
-  height: 180%;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    rgba(200, 164, 93, 0.45),
-    transparent
-  );
-  transform: translateX(-40%);
-  opacity: 0;
+.ks-btn-gold:hover {
+  filter: brightness(1.03);
 }
 
-.ks-btn-gold:hover::after {
-  animation: ksShimmer 900ms ease-out 1;
+.ks-btn-ghost {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.14);
 }
 
-video {
-  transform: translateZ(0);
+.ks-btn-ghost:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.ks-icon-chip {
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(12px);
 }

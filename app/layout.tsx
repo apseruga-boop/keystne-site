@@ -1,20 +1,24 @@
 import "./globals.css";
 import type { Metadata } from "next";
+import { Playfair_Display } from "next/font/google";
+
+const diorLike = Playfair_Display({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  display: "swap",
+});
 
 export const metadata: Metadata = {
-  title: "Keystne — Dubai Real Estate",
-  description:
-    "Premium property brokerage, leasing, and management in Dubai with a concierge-style personal experience.",
+  title: "keystne.dubai",
+  description: "Premium real estate services in Dubai.",
 };
 
 export default function RootLayout({
   children,
-}: {
-  children: React.ReactNode;
-}) {
+}: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en">
-      <body className="bg-ksBlack text-ksWhite">{children}</body>
+      <body className={diorLike.className}>{children}</body>
     </html>
   );
 }
