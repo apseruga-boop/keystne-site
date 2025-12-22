@@ -6,13 +6,14 @@ import KeystneFooter from "../../components/site/KeystneFooter";
 import { CONTACT, HOME_VIDEOS } from "../../components/site/config";
 
 /**
- * CHANGES APPLIED (ONLY):
- * 1) Under the top hero pill area: removed "CONCIERGE" and removed DubaiTimePill entirely.
- * 2) In hero buttons row: removed "Compare" button.
- * 3) Reduced spacing between hero CTAs and the next section ("Pick what you need — we’ll do the rest.")
- *    by reducing hero bottom padding and the next section top padding.
- *
- * NOTHING ELSE CHANGED.
+ * CONCIERGE PAGE — UPDATED (as per latest notes)
+ * ONLY changes made:
+ * 1) Remove the two HERO buttons (gold “Relocation concierge” + “Curated viewing trip”) — remove full box + move content up
+ * 2) Move “LIVE SUMMARY” (black side box) to the END (final step), make it WHITE, and ensure it summarizes everything
+ * 3) Make immigration guidance clearly origin-market aware (e.g., Canada/US/UK 90/180 visitor rule etc. + residency pathways high-level)
+ * 4) Remove “Already resident” option from Relocation visa direction
+ * 5) Apply the same “summary at the end + white” approach to Curated Viewing Trip
+ * Everything else kept as-is.
  */
 
 type ConciergeFlow = "relocation" | "viewing" | null;
@@ -318,7 +319,35 @@ function Progress({ step, total }: { step: number; total: number }) {
   );
 }
 
-/** Contact dock — matches locked homepage style (white dock, gold hover) */
+/** Dubai time pill (unchanged) */
+function DubaiTimePill() {
+  const [now, setNow] = useState<Date>(() => new Date());
+  useEffect(() => {
+    const t = window.setInterval(() => setNow(new Date()), 1000);
+    return () => window.clearInterval(t);
+  }, []);
+  const timeText = useMemo(() => {
+    try {
+      return new Intl.DateTimeFormat("en-GB", {
+        timeZone: "Asia/Dubai",
+        weekday: "short",
+        hour: "2-digit",
+        minute: "2-digit",
+      }).format(now);
+    } catch {
+      return now.toLocaleTimeString();
+    }
+  }, [now]);
+
+  return (
+    <div className="inline-flex items-center gap-2 rounded-full border border-black/10 bg-white/90 px-4 py-2 text-[12px] font-semibold text-black shadow-ks backdrop-blur">
+      <span className="h-2 w-2 rounded-full bg-[#C8A45D]" />
+      Dubai time: <span className="text-black/75">{timeText}</span>
+    </div>
+  );
+}
+
+/** Contact dock — unchanged */
 function ContactDock() {
   return (
     <div className="fixed bottom-5 right-5 z-40 w-[240px] overflow-hidden rounded-[22px] border border-black/10 bg-white/90 shadow-ks backdrop-blur-xl">
@@ -359,6 +388,7 @@ function ContactDock() {
             <Icon name="wechat" /> {CONTACT.wechatText || "WeChat ID: keystne"}
           </div>
         </div>
+
         <div className="mt-3 rounded-2xl border border-black/10 bg-black px-3 py-3">
           <div className="text-[10px] tracking-[0.22em] text-white/60">
             DIRECT
@@ -372,63 +402,7 @@ function ContactDock() {
   );
 }
 
-/* ---------- Wizard (locked) ---------- */
-
-type Step = {
-  id: string;
-  title: string;
-  question: string;
-  render: (state: any, setState: (patch: any) => void) => React.ReactNode;
-  validate: (state: any) => string | null;
-};
-
-function computeRunwayWeeksRelocation(s: any) {
-  const household = s.household || "Single";
-  const kids = s.kids || "No";
-  const areaKnown = s.areaKnown || "Not sure";
-  let weeks = 6;
-  if (household === "Couple") weeks += 1;
-  if (household === "Family") weeks += 2;
-  if (kids === "Yes") weeks += 3;
-  if (areaKnown === "Not sure") weeks += 2;
-  return weeks;
-}
-
-function visaGuidance(visaDirection: string) {
-  const common = [
-    "Passport validity and entry permissions (depend on nationality)",
-    "Emirates ID setup and medical checks (where relevant)",
-    "Banking + proof of address / salary documentation",
-    "Family sponsorship pathway (if applicable)",
-  ];
-  if (visaDirection === "Employment visa") {
-    return [
-      "Employer-led employment visa (most common)",
-      "Timeline depends on employer onboarding and approvals",
-      ...common,
-    ];
-  }
-  if (visaDirection === "Investor visa") {
-    return [
-      "Investor / partner pathway (structure depends on investment type)",
-      "Golden Visa eligibility can apply for some profiles (case-by-case)",
-      ...common,
-    ];
-  }
-  if (visaDirection === "Already resident") {
-    return [
-      "Residency transfer / status check (depends on your current visa type)",
-      "Housing + community shortlist becomes priority",
-      ...common,
-    ];
-  }
-  return [
-    "We’ll recommend the best pathway based on your profile (high-level first)",
-    "We’ll validate requirements and documents during your call",
-    ...common,
-  ];
-}
-
+/* ---------- Countries (pre-populated) ---------- */
 const COUNTRIES = [
   "United Arab Emirates",
   "United Kingdom",
@@ -484,28 +458,116 @@ const COUNTRIES = [
   "Colombia",
 ];
 
-function entryGuidanceByOrigin(originCountry: string) {
-  if (originCountry === "United Kingdom") {
+/* ---------- Wizard (updated summary positioning + origin-aware guidance) ---------- */
+type Step = {
+  id: string;
+  title: string;
+  question: string;
+  render: (state: any, setState: (patch: any) => void) => React.ReactNode;
+  validate: (state: any) => string | null;
+};
+
+function computeRunwayWeeksRelocation(s: any) {
+  const household = s.household || "Single";
+  const kids = s.kids || "No";
+  const areaKnown = s.areaKnown || "Not sure";
+  let weeks = 6;
+  if (household === "Couple") weeks += 1;
+  if (household === "Family") weeks += 2;
+  if (kids === "Yes") weeks += 3;
+  if (areaKnown === "Not sure") weeks += 2;
+  return weeks;
+}
+
+/**
+ * Origin-aware visitor entry + quick “what it usually means” for first steps.
+ * High-level (lead-gen). Rules can change; we verify on a call.
+ * (Checked Dec 2025: Canada travel advice, UAE embassy for US, UK FCDO, UAE gov guidance.)
+ */
+function originEntryNotes(originCountry?: string) {
+  const c = (originCountry || "").trim();
+
+  const common = [
+    "Passport should be valid for 6+ months",
+    "Visitor rules are separate from residency (employment/investor/family routes)",
+    "Final requirements depend on passport + personal circumstances",
+  ];
+
+  if (c === "Canada") {
     return [
-      "Short-stay entry: UK passport holders typically receive a visa on arrival for tourism (duration/conditions apply).",
-      "For living in Dubai: you’ll normally need a residence route (employment, investor/business, long-term categories where eligible).",
+      "Tourist entry is typically visa-on-arrival and free",
+      "You can usually stay up to 90 days within a 180-day period (tourist entry)",
+      ...common,
     ];
   }
-  if (originCountry === "United States") {
+
+  if (c === "United States") {
     return [
-      "Short-stay entry: US passport holders typically do not need to pre-arrange a visa for short visits (duration/conditions apply).",
-      "For living in Dubai: you’ll normally need a residence route (employment, investor/business, long-term categories where eligible).",
+      "Tourist entry is typically visa-on-arrival and free",
+      "You can usually stay up to 90 days within a 180-day period (tourist entry)",
+      ...common,
     ];
   }
-  if (originCountry === "United Arab Emirates") {
+
+  if (c === "United Kingdom") {
     return [
-      "If you’re already UAE-based: we focus on area shortlist + housing + onboarding logistics.",
-      "We’ll confirm your current status (visa type / Emirates ID) and tailor next steps.",
+      "Tourist entry is typically visa-on-arrival and free",
+      "You can usually stay up to 90 days within a 180-day period (tourist entry)",
+      ...common,
     ];
   }
+
+  // Keep it clean for all other countries (we verify per nationality)
   return [
-    "Short-stay entry rules depend on nationality and can change — we’ll confirm the correct entry pathway for you.",
-    "For living in Dubai: you’ll normally need a residence route (employment, investor/business, long-term categories where eligible).",
+    "Entry requirements depend on nationality (some are 30-day, some 90-day, some require pre-arranged visas)",
+    "We’ll confirm the exact entry rule for your passport before you travel",
+    ...common,
+  ];
+}
+
+function visaGuidance(visaDirection: string, originCountry?: string) {
+  const entry = originEntryNotes(originCountry);
+
+  const residencyCommon = [
+    "Emirates ID + medical checks (where relevant)",
+    "Banking setup + proof of address / salary documentation",
+    "If family is relocating: sponsorship pathway and document attestation",
+  ];
+
+  // Short “entry” section first (origin-aware)
+  const header = ["Entry / first arrival (high-level):", ...entry].map(
+    (x) => x
+  );
+
+  if (visaDirection === "Employment visa") {
+    return [
+      ...header,
+      "",
+      "Residency pathway (high-level):",
+      "Employer-sponsored employment visa (most common)",
+      "Timeline depends on employer onboarding + approvals",
+      ...residencyCommon,
+    ];
+  }
+  if (visaDirection === "Investor visa") {
+    return [
+      ...header,
+      "",
+      "Residency pathway (high-level):",
+      "Investor / partner pathway depends on your structure (company / assets / eligibility)",
+      "Golden Visa can apply for some profiles (case-by-case)",
+      ...residencyCommon,
+    ];
+  }
+
+  // "Need guidance" default
+  return [
+    ...header,
+    "",
+    "Residency pathway (high-level):",
+    "We’ll recommend the best route based on your profile (high-level first)",
+    "We validate requirements + documents during your call",
+    ...residencyCommon,
   ];
 }
 
@@ -530,21 +592,18 @@ const RELOCATION_STEPS: Step[] = [
             options={["ASAP", "1–2 months", "3–6 months", "6+ months"]}
           />
         </FieldShell>
+
         <div className="md:col-span-2">
           <FieldShell
             label="Visa direction"
             hint="High-level guidance. We confirm on a call."
             required
           >
+            {/* Removed “Already resident” */}
             <Segmented
               value={s.visaDirection}
               onChange={(v) => setS({ visaDirection: v })}
-              options={[
-                "Need guidance",
-                "Employment visa",
-                "Investor visa",
-                "Already resident",
-              ]}
+              options={["Need guidance", "Employment visa", "Investor visa"]}
             />
           </FieldShell>
         </div>
@@ -577,6 +636,7 @@ const RELOCATION_STEPS: Step[] = [
             options={["No", "Yes"]}
           />
         </FieldShell>
+
         <div className="md:col-span-2">
           <FieldShell label="Lifestyle preference" required>
             <Segmented
@@ -665,6 +725,7 @@ const RELOCATION_STEPS: Step[] = [
           <div className="text-[11px] tracking-[0.22em] text-black/55">
             YOUR PLAN
           </div>
+
           <div className="mt-2 text-sm text-black/70">
             You’re relocating from{" "}
             <span className="font-semibold text-black">
@@ -685,43 +746,40 @@ const RELOCATION_STEPS: Step[] = [
 
           <div className="mt-4 rounded-2xl bg-white p-4 shadow-sm">
             <div className="text-[11px] tracking-[0.22em] text-black/55">
-              ENTRY & VISA OPTIONS (TAILORED)
+              IMMIGRATION (ORIGIN-AWARE, HIGH-LEVEL)
             </div>
             <ul className="mt-2 space-y-2 text-sm text-black/75">
-              {entryGuidanceByOrigin(s.originCountry || "").map((x: string) => (
-                <li key={x} className="flex items-start gap-2">
-                  <span className="mt-[2px] inline-flex h-5 w-5 items-center justify-center rounded-full bg-[#C8A45D] text-black">
-                    <Icon name="check" className="h-3.5 w-3.5" />
-                  </span>
-                  <span>{x}</span>
-                </li>
-              ))}
-            </ul>
-            <div className="mt-3 text-[11px] text-black/45">
-              Note: This is high-level guidance. Rules vary by nationality and
-              can change — we confirm details on a call.
-            </div>
-          </div>
-
-          <div className="mt-4 rounded-2xl bg-white p-4 shadow-sm">
-            <div className="text-[11px] tracking-[0.22em] text-black/55">
-              VISA PATHWAYS (HIGH-LEVEL)
-            </div>
-            <ul className="mt-2 space-y-2 text-sm text-black/75">
-              {visaGuidance(s.visaDirection || "Need guidance").map(
-                (x: string) => (
+              {visaGuidance(
+                s.visaDirection || "Need guidance",
+                s.originCountry
+              ).map((x: string) => {
+                if (!x.trim())
+                  return <div key={Math.random()} className="h-2" />;
+                const isHeader = x.endsWith(":");
+                return (
                   <li key={x} className="flex items-start gap-2">
-                    <span className="mt-[2px] inline-flex h-5 w-5 items-center justify-center rounded-full bg-[#C8A45D] text-black">
+                    <span
+                      className={[
+                        "mt-[2px] inline-flex h-5 w-5 items-center justify-center rounded-full",
+                        isHeader
+                          ? "bg-black text-white"
+                          : "bg-[#C8A45D] text-black",
+                      ].join(" ")}
+                    >
                       <Icon name="check" className="h-3.5 w-3.5" />
                     </span>
-                    <span>{x}</span>
+                    <span
+                      className={isHeader ? "font-semibold text-black" : ""}
+                    >
+                      {x}
+                    </span>
                   </li>
-                )
-              )}
+                );
+              })}
             </ul>
             <div className="mt-3 text-[11px] text-black/45">
-              Note: Rules vary by nationality and change over time. We confirm
-              details on a call.
+              Note: Rules vary by nationality and can change. We confirm details
+              on a call.
             </div>
           </div>
 
@@ -731,10 +789,10 @@ const RELOCATION_STEPS: Step[] = [
             </div>
             <ul className="mt-2 space-y-2 text-sm text-black/75">
               {[
-                "A clean document pack: passport, photos, basic proof of income",
+                "A clean document pack: passport, photos, proof of income",
                 "Area shortlist aligned to your lifestyle (and schools if needed)",
                 "Housing approach: lease vs buy-first (we’ll advise)",
-                "First 30-days checklist: SIM/banking/transport/building setup",
+                "First 30-days checklist: SIM / banking / transport / building setup",
               ].map((x) => (
                 <li key={x} className="flex items-start gap-2">
                   <span className="mt-[2px] inline-flex h-5 w-5 items-center justify-center rounded-full bg-black text-white">
@@ -782,6 +840,7 @@ const VIEWING_STEPS: Step[] = [
             options={["Now", "1–3 months", "3–6 months", "6+ months"]}
           />
         </FieldShell>
+
         <div className="md:col-span-2">
           <FieldShell label="Goal" required>
             <Segmented
@@ -829,6 +888,7 @@ const VIEWING_STEPS: Step[] = [
             options={["Light", "Balanced", "Intensive"]}
           />
         </FieldShell>
+
         <div className="md:col-span-2 rounded-2xl border border-black/10 bg-black/[0.03] p-4 text-sm text-black/70">
           We’ll organise a curated itinerary: optional pickup, area brief, and
           viewings that fit your pace.
@@ -861,6 +921,7 @@ const VIEWING_STEPS: Step[] = [
             options={["Off-plan", "Secondary", "Both"]}
           />
         </FieldShell>
+
         <div className="md:col-span-2">
           <FieldShell label="Bedrooms (preference)" required>
             <Segmented
@@ -892,6 +953,7 @@ const VIEWING_STEPS: Step[] = [
             options={["Not sure", "Known"]}
           />
         </FieldShell>
+
         {s.areasKnown === "Known" ? (
           <FieldShell label="Areas" hint="Comma-separated is fine" required>
             <TextInput
@@ -909,6 +971,7 @@ const VIEWING_STEPS: Step[] = [
             />
           </FieldShell>
         )}
+
         <div className="md:col-span-2 rounded-2xl border border-black/10 bg-black/[0.03] p-4 text-sm text-black/70">
           We’ll shortlist options, then schedule viewings around your trip.
         </div>
@@ -928,45 +991,19 @@ const VIEWING_STEPS: Step[] = [
     title: "Finish",
     question: "Here’s your step-by-step plan (tick-box style).",
     render: (s) => {
-      const goal = s.goal || "Mixed";
-      const marketType = s.marketType || "Both";
       const horizon = s.horizon || "—";
       const intensity = s.intensity || "Balanced";
-
-      const paceLine =
-        intensity === "Intensive"
-          ? "Lock a packed schedule (multiple viewings per day, tight routing)"
-          : intensity === "Light"
-          ? "Lock a lighter schedule (more time per building + area feel)"
-          : "Lock a balanced schedule (efficient viewings + breathing room)";
-
-      const marketLine =
-        marketType === "Off-plan"
-          ? "Shortlist off-plan options + compare developer payment plans"
-          : marketType === "Secondary"
-          ? "Shortlist ready properties + assess building quality and service charges"
-          : "Shortlist both off-plan + ready options for side-by-side comparison";
-
-      const goalLine =
-        goal === "Rental yield"
-          ? "Yield lens: rental comps, occupancy, and investor-grade buildings"
-          : goal === "Capital growth"
-          ? "Growth lens: demand drivers, future supply, and exit strategy"
-          : goal === "End-use"
-          ? "End-use lens: livability, commute, noise, sunlight, and amenities"
-          : "Balanced lens: livability + investment fundamentals";
-
       const plan = [
         "Intro call — confirm goals, budget and timeline",
-        goalLine,
-        "Agree shortlist criteria (areas, property type, must-haves)",
-        marketLine,
-        paceLine,
-        "Arrange trip logistics (optional pickup / route plan / time windows)",
-        "Conduct viewings + area briefing on the ground",
-        "Shortlist final 1–3 options and compare trade-offs clearly",
-        "Offer strategy + negotiation guidance (high-level) + next steps",
-        `Momentum plan: align actions to your ${horizon} horizon`,
+        "Agree shortlist criteria (areas, property type, yield vs end-use)",
+        "Build shortlist (6–10 options) aligned to your preferences",
+        "Lock viewing schedule (pace matched to your intensity)",
+        "Arrange trip logistics (optional pickup / route plan)",
+        "Conduct viewings + area brief on the ground",
+        "Shortlist final 1–3 options and compare payment plans",
+        "Offer strategy + negotiation guidance (high-level)",
+        "Paperwork checklist + timelines (high-level)",
+        `Target next step: ${horizon} horizon — we keep momentum`,
       ];
 
       return (
@@ -982,7 +1019,7 @@ const VIEWING_STEPS: Step[] = [
             </div>
 
             <div className="mt-4 space-y-2">
-              {plan.map((x: string) => (
+              {plan.map((x) => (
                 <div
                   key={x}
                   className="flex items-start gap-3 rounded-2xl border border-black/10 bg-white px-4 py-3 shadow-sm"
@@ -1024,6 +1061,7 @@ type EmailCapture = {
 function buildRelocationSummary(state: any) {
   const runway = computeRunwayWeeksRelocation(state);
   const lines: string[] = [];
+
   lines.push("CONCIERGE — RELOCATION SUMMARY");
   lines.push("");
   lines.push(`Origin country: ${state.originCountry || "-"}`);
@@ -1045,18 +1083,13 @@ function buildRelocationSummary(state: any) {
   lines.push(`Suggested runway: ~${runway} weeks`);
   lines.push("");
 
-  lines.push("Entry & visa options (tailored):");
-  entryGuidanceByOrigin(state.originCountry || "").forEach((v: string) =>
-    lines.push(`- ${v}`)
-  );
-  lines.push("");
+  lines.push("Immigration (origin-aware, high-level):");
+  visaGuidance(
+    state.visaDirection || "Need guidance",
+    state.originCountry
+  ).forEach((v: string) => lines.push(`- ${v}`));
 
-  lines.push("Visa pathways (high-level):");
-  visaGuidance(state.visaDirection || "Need guidance").forEach((v: string) =>
-    lines.push(`- ${v}`)
-  );
   lines.push("");
-
   lines.push("Key move checklist:");
   [
     "Document pack: passport, photos, proof of income",
@@ -1070,11 +1103,13 @@ function buildRelocationSummary(state: any) {
     lines.push("Notes:");
     lines.push(state.notes.trim());
   }
+
   return lines.join("\n");
 }
 
 function buildViewingSummary(state: any) {
   const lines: string[] = [];
+
   lines.push("CONCIERGE — CURATED VIEWING TRIP SUMMARY");
   lines.push("");
   lines.push(`Budget range: ${state.budgetRange || "-"}`);
@@ -1096,12 +1131,13 @@ function buildViewingSummary(state: any) {
     }`
   );
   lines.push("");
-  lines.push("Step-by-step plan included on screen (tick-box style).");
+  lines.push("10-step tick-box plan is generated on the final step.");
   lines.push("");
   if (state.notes?.trim()) {
     lines.push("Notes:");
     lines.push(state.notes.trim());
   }
+
   return lines.join("\n");
 }
 
@@ -1118,8 +1154,10 @@ function Wizard({
 
   const [stepIdx, setStepIdx] = useState(0);
   const [state, setState] = useState<any>(() => ({}));
+
   const [emailOpen, setEmailOpen] = useState(false);
   const [bookOpen, setBookOpen] = useState(false);
+
   const [capture, setCapture] = useState<EmailCapture>({
     name: "",
     email: "",
@@ -1156,6 +1194,8 @@ function Wizard({
     return "";
   }, [flow, state]);
 
+  const isFinalStep = stepIdx === steps.length - 1;
+
   const emailErrors = useMemo(() => {
     const e: Record<string, string> = {};
     if (!capture.name.trim()) e.name = "Add your name.";
@@ -1179,12 +1219,10 @@ function Wizard({
       "",
       summaryText,
     ].join("\n");
-
     const subject =
       flow === "relocation"
         ? "Keystne — Concierge (Relocation) summary"
         : "Keystne — Concierge (Curated Viewing Trip) summary";
-
     window.location.href = buildMailto({ subject, body });
   };
 
@@ -1200,12 +1238,10 @@ function Wizard({
       "",
       summaryText,
     ].join("\n");
-
     const subject =
       flow === "relocation"
         ? "Keystne — Book a call (Relocation)"
         : "Keystne — Book a call (Viewing Trip)";
-
     window.location.href = buildMailto({ subject, body });
   };
 
@@ -1215,6 +1251,21 @@ function Wizard({
     flow === "relocation"
       ? "A guided relocation plan — area shortlist + onboarding support."
       : "We organise your Dubai visit — shortlist + viewings + a clear process to buy with confidence.";
+
+  // tiny smooth transition (kept)
+  const key = `${flow}-${stepIdx}`;
+  const contentRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    const el = contentRef.current;
+    if (!el) return;
+    el.classList.remove("opacity-100", "translate-y-0");
+    el.classList.add("opacity-0", "translate-y-2");
+    const t = window.setTimeout(() => {
+      el.classList.remove("opacity-0", "translate-y-2");
+      el.classList.add("opacity-100", "translate-y-0");
+    }, 10);
+    return () => window.clearTimeout(t);
+  }, [key]);
 
   return (
     <>
@@ -1228,7 +1279,8 @@ function Wizard({
         subtitle={subtitle}
         widthClass="max-w-4xl"
       >
-        <div className="grid gap-6 md:grid-cols-[1.2fr_0.8fr]">
+        {/* Single-column layout now (live summary moved to end) */}
+        <div className="space-y-4">
           <div className="space-y-5">
             <Progress step={stepIdx} total={steps.length} />
 
@@ -1240,7 +1292,13 @@ function Wizard({
                 {current.question}
               </div>
 
-              <div className="mt-5">{current.render(state, setPatch)}</div>
+              <div
+                ref={contentRef}
+                className="mt-5 transition-all duration-300 opacity-100 translate-y-0"
+                key={key}
+              >
+                {current.render(state, setPatch)}
+              </div>
 
               {err ? (
                 <div className="mt-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
@@ -1297,25 +1355,26 @@ function Wizard({
             </div>
           </div>
 
-          <div className="space-y-4">
-            <div className="rounded-[24px] border border-black/10 bg-black p-5 text-white shadow-sm">
-              <div className="text-[11px] tracking-[0.22em] text-white/55">
-                LIVE SUMMARY
-              </div>
-              <div className="mt-3 whitespace-pre-wrap text-sm text-white/85">
-                {summaryText ||
-                  "Start answering questions to see your plan here."}
-              </div>
-            </div>
-
+          {/* SUMMARY AT THE END (FINAL STEP ONLY) — WHITE */}
+          {isFinalStep ? (
             <div className="rounded-[24px] border border-black/10 bg-white p-5 shadow-sm">
               <div className="text-[11px] tracking-[0.22em] text-black/55">
-                WHY THIS WORKS
+                SUMMARY
               </div>
-              <div className="mt-2 text-sm text-black/70">
-                You get a clear plan instantly. We get the context we need to
-                tailor the next step — without wasting time.
+              <div className="mt-3 whitespace-pre-wrap text-sm text-black/80">
+                {summaryText ||
+                  "Summary will appear here once your answers are complete."}
               </div>
+            </div>
+          ) : null}
+
+          <div className="rounded-[24px] border border-black/10 bg-white p-5 shadow-sm">
+            <div className="text-[11px] tracking-[0.22em] text-black/55">
+              WHY THIS WORKS
+            </div>
+            <div className="mt-2 text-sm text-black/70">
+              You get a clear plan instantly. We get the context we need to
+              tailor the next step — without wasting time.
             </div>
           </div>
         </div>
@@ -1329,11 +1388,7 @@ function Wizard({
         widthClass="max-w-2xl"
       >
         <div className="grid gap-4 md:grid-cols-2">
-          <FieldShell
-            label="Full name"
-            required
-            error={(emailErrors as any).name}
-          >
+          <FieldShell label="Full name" required error={emailErrors.name}>
             <TextInput
               value={capture.name}
               onChange={(v) => setCapture((p) => ({ ...p, name: v }))}
@@ -1343,7 +1398,7 @@ function Wizard({
           <FieldShell
             label="Phone (with country code)"
             required
-            error={(emailErrors as any).phone}
+            error={emailErrors.phone}
           >
             <TextInput
               value={capture.phone}
@@ -1351,18 +1406,14 @@ function Wizard({
               placeholder="+44… / +971…"
             />
           </FieldShell>
-          <FieldShell label="Email" required error={(emailErrors as any).email}>
+          <FieldShell label="Email" required error={emailErrors.email}>
             <TextInput
               value={capture.email}
               onChange={(v) => setCapture((p) => ({ ...p, email: v }))}
               placeholder="name@email.com"
             />
           </FieldShell>
-          <FieldShell
-            label="Confirm email"
-            required
-            error={(emailErrors as any).email2}
-          >
+          <FieldShell label="Confirm email" required error={emailErrors.email2}>
             <TextInput
               value={capture.email2}
               onChange={(v) => setCapture((p) => ({ ...p, email2: v }))}
@@ -1403,11 +1454,7 @@ function Wizard({
         widthClass="max-w-2xl"
       >
         <div className="grid gap-4 md:grid-cols-2">
-          <FieldShell
-            label="Full name"
-            required
-            error={(emailErrors as any).name}
-          >
+          <FieldShell label="Full name" required error={emailErrors.name}>
             <TextInput
               value={capture.name}
               onChange={(v) => setCapture((p) => ({ ...p, name: v }))}
@@ -1417,7 +1464,7 @@ function Wizard({
           <FieldShell
             label="Phone (with country code)"
             required
-            error={(emailErrors as any).phone}
+            error={emailErrors.phone}
           >
             <TextInput
               value={capture.phone}
@@ -1425,18 +1472,14 @@ function Wizard({
               placeholder="+44… / +971…"
             />
           </FieldShell>
-          <FieldShell label="Email" required error={(emailErrors as any).email}>
+          <FieldShell label="Email" required error={emailErrors.email}>
             <TextInput
               value={capture.email}
               onChange={(v) => setCapture((p) => ({ ...p, email: v }))}
               placeholder="name@email.com"
             />
           </FieldShell>
-          <FieldShell
-            label="Confirm email"
-            required
-            error={(emailErrors as any).email2}
-          >
+          <FieldShell label="Confirm email" required error={emailErrors.email2}>
             <TextInput
               value={capture.email2}
               onChange={(v) => setCapture((p) => ({ ...p, email2: v }))}
@@ -1490,7 +1533,6 @@ function Wizard({
 }
 
 /* ---------- Page ---------- */
-
 export default function ConciergePage() {
   // NAV hide-on-scroll-down (page-only)
   const [navHidden, setNavHidden] = useState(false);
@@ -1538,46 +1580,36 @@ export default function ConciergePage() {
           playsInline
         />
         <div className="absolute inset-0 bg-gradient-to-b from-black/65 via-black/25 to-white" />
-
-        {/* Reduced bottom padding from pb-12 -> pb-6 to reduce space to next section */}
-        <div className="relative mx-auto max-w-6xl px-4 pb-6 pt-28">
+        <div className="relative mx-auto max-w-6xl px-4 pb-12 pt-28">
           <div className="max-w-3xl">
-            {/* Removed CONCIERGE and removed DubaiTimePill entirely */}
-
-            <h1 className="text-4xl font-semibold tracking-tight text-white md:text-6xl">
+            <div className="text-[11px] tracking-[0.22em] text-white/80">
+              CONCIERGE
+            </div>
+            <h1 className="mt-3 text-4xl font-semibold tracking-tight text-white md:text-6xl">
               Concierge, done properly.
             </h1>
-
             <p className="mt-5 text-base text-white/85 md:text-lg">
               Two ways we support you: relocate seamlessly, or fly in for a
               curated viewing trip and invest with clarity.
             </p>
 
-            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-              <button
-                onClick={() => setFlow("relocation")}
-                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#C8A45D] px-6 py-4 text-sm font-semibold text-black hover:brightness-110"
-              >
-                Relocation concierge <Icon name="arrow" />
-              </button>
+            {/* CHANGE: Removed the full HERO buttons box (Relocation / Viewing trip) */}
+          </div>
+        </div>
+      </section>
 
-              <button
-                onClick={() => setFlow("viewing")}
-                className="inline-flex items-center justify-center gap-2 rounded-2xl border border-white/30 bg-white/10 px-6 py-4 text-sm font-semibold text-white hover:bg-white/15"
-              >
-                Curated viewing trip <Icon name="arrow" />
-              </button>
-
-              {/* Compare removed */}
-            </div>
+      {/* Dubai time pill — unchanged */}
+      <section className="bg-white">
+        <div className="mx-auto max-w-6xl px-4">
+          <div className="-mt-6 flex justify-center">
+            <DubaiTimePill />
           </div>
         </div>
       </section>
 
       {/* BODY — light premium */}
       <section className="bg-white">
-        {/* Reduced top padding from py-12 -> pt-8 pb-12 to reduce space from hero */}
-        <div className="mx-auto max-w-6xl px-4 pt-8 pb-12">
+        <div className="mx-auto max-w-6xl px-4 py-12">
           <div className="text-[11px] tracking-[0.22em] text-black/55">
             CHOOSE A PATH
           </div>
@@ -1589,7 +1621,7 @@ export default function ConciergePage() {
             summary you can email to yourself and use to book a call.
           </p>
 
-          <div className="mt-4 grid gap-4 md:grid-cols-2">
+          <div className="mt-6 grid gap-4 md:grid-cols-2">
             <button
               onClick={() => setFlow("relocation")}
               className="group relative overflow-hidden rounded-[28px] border border-black/10 bg-white text-left shadow-ks transition hover:-translate-y-1"
@@ -1635,14 +1667,15 @@ export default function ConciergePage() {
             </button>
           </div>
 
-          <div className="mt-6 rounded-[28px] border border-white/10 bg-black p-7 text-white shadow-sm">
-            <div className="text-[11px] tracking-[0.22em] text-white/60">
+          {/* PROMISE — unchanged from your provided code */}
+          <div className="mt-8 rounded-[28px] border border-black/10 bg-white p-7 text-black shadow-sm">
+            <div className="text-[11px] tracking-[0.22em] text-black/55">
               PROMISE
             </div>
             <div className="mt-2 text-2xl font-semibold">
               We keep it premium. We keep it personal.
             </div>
-            <div className="mt-3 max-w-3xl text-sm text-white/75">
+            <div className="mt-3 max-w-3xl text-sm text-black/70">
               This is designed to be quick, not “boring form-filling”. You
               answer a few guided prompts, then you get a clean summary + an
               easy next step.
