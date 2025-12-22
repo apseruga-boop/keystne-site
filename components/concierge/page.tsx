@@ -2,34 +2,43 @@
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import KeystneNav from "../../components/site/KeystneNav";
-import KeystneFooter from "../../components/site/KeystneFooter";
-import { CONTACT, HOME_VIDEOS } from "../../components/site/config";
 
 /**
- * PAGE 2 — CONCIERGE
- * - Nav hides on scroll down, shows on scroll up (page-only wrapper)
- * - Two concierge paths:
- *   1) Relocation Concierge (5 steps + summary + cost-of-living preview)
- *   2) Curated Viewing Trip (5 steps + summary + checklist)
- * - Premium, playful wizard (pure React + Tailwind; no external libs)
- * - Lead-gen actions:
- *   - Email summary (double-entry email) => mailto to Arthur + cc Stuart (captures lead)
- *   - Book a call (date/time) => mailto to Arthur + cc Stuart
- * - Light page background (white + black + gold), hero keeps video background
- * - Contact dock matches homepage style (white dock, gold hover)
+ * app/concierge/page.tsx
+ * Self-contained Concierge page (no config imports) to avoid “nothing changed” + export errors.
+ *
+ * Includes:
+ * - Nav hides on scroll down, shows on scroll up
+ * - Video hero
+ * - Two concierge paths (Relocation / Curated viewing trip)
+ * - Premium wizard modal (5 steps each) + summary
+ * - Email summary + book call (mailto lead-gen)
+ * - White contact dock with gold hover
+ *
+ * Colors:
+ * - Gold: #C8A45D
  */
 
-type ConciergeFlow = "relocation" | "viewing" | null;
+const GOLD = "#C8A45D";
 
-type CallWhen = "ASAP" | "1 month" | "2 months" | "6 months";
-
-type EmailCapture = {
-  name: string;
-  email: string;
-  email2: string;
-  phone: string;
+// Replace these later with your real details
+const CONTACT = {
+  phoneDisplay: "+971 XX XXX XXXX",
+  phoneTel: "tel:+971XXXXXXXXX",
+  whatsappLink: "https://wa.me/971XXXXXXXXX",
+  telegramLink: "https://t.me/keystne",
+  wechatText: "WeChat ID: keystne",
+  emailArthur: "arthur@keystne.com",
+  emailStuart: "stuart@keystne.com",
 };
+
+// Replace later with your owned/licensed video
+const HOME_VIDEOS = {
+  hero: "https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4",
+};
+
+type ConciergeFlow = "relocation" | "viewing" | null;
+type CallWhen = "ASAP" | "1 month" | "2 months" | "6 months";
 
 function isValidEmail(email: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email.trim());
@@ -47,7 +56,7 @@ function buildMailto(args: { subject: string; body: string }) {
   return `mailto:${to}?cc=${cc}&subject=${subject}&body=${body}`;
 }
 
-/** Simple inline icons (NO lucide-react) */
+/** Small inline icons (no external icon libs) */
 function Icon({
   name,
   className = "h-4 w-4",
@@ -69,7 +78,10 @@ function Icon({
     fill: "none",
     stroke: "currentColor",
     strokeWidth: 2,
+    strokeLinecap: "round" as const,
+    strokeLinejoin: "round" as const,
   };
+
   switch (name) {
     case "arrow":
       return (
@@ -100,8 +112,8 @@ function Icon({
     case "mail":
       return (
         <svg viewBox="0 0 24 24" {...common}>
-          <path d="M4 4h16v16H4z" />
-          <path d="M4 6l8 6 8-6" />
+          <path d="M4 6h16v12H4z" />
+          <path d="M4 7l8 6 8-6" />
         </svg>
       );
     case "calendar":
@@ -155,6 +167,7 @@ function Modal({
   widthClass?: string;
 }) {
   if (!open) return null;
+
   return (
     <div className="fixed inset-0 z-[70] flex items-end justify-center p-4 md:items-center">
       <button
@@ -164,7 +177,7 @@ function Modal({
       />
       <div
         className={[
-          "relative w-full overflow-hidden rounded-[28px] border border-black/10 bg-white shadow-ks",
+          "relative w-full overflow-hidden rounded-[28px] border border-black/10 bg-white shadow-2xl",
           widthClass,
         ].join(" ")}
       >
@@ -230,16 +243,19 @@ function TextInput({
   value,
   onChange,
   placeholder,
+  type = "text",
 }: {
   value: string;
   onChange: (v: string) => void;
   placeholder?: string;
+  type?: string;
 }) {
   return (
     <input
       value={value}
       onChange={(e) => onChange(e.target.value)}
       placeholder={placeholder}
+      type={type}
       className="w-full bg-transparent text-sm text-black outline-none placeholder:text-black/30"
     />
   );
@@ -290,9 +306,10 @@ function Segmented({
             className={[
               "rounded-full px-3 py-2 text-[12px] font-semibold transition",
               active
-                ? "bg-[#C8A45D] text-black"
+                ? "text-black"
                 : "bg-black/5 text-black/70 hover:bg-black/10",
             ].join(" ")}
+            style={active ? { backgroundColor: GOLD } : undefined}
             type="button"
           >
             {o}
@@ -316,21 +333,22 @@ function Progress({ step, total }: { step: number; total: number }) {
       </div>
       <div className="h-2 w-full overflow-hidden rounded-full bg-black/10">
         <div
-          className="h-full rounded-full bg-[#C8A45D] transition-all"
-          style={{ width: `${pct}%` }}
+          className="h-full rounded-full transition-all"
+          style={{ width: `${pct}%`, backgroundColor: GOLD }}
         />
       </div>
     </div>
   );
 }
 
-/** Contact dock — white, premium, gold hover; matches locked homepage dock direction */
+/** White dock + gold hover */
 function ContactDock() {
   return (
-    <div className="fixed bottom-5 right-5 z-40 w-[240px] overflow-hidden rounded-[22px] border border-black/10 bg-white/90 shadow-ks backdrop-blur-xl">
+    <div className="fixed bottom-5 right-5 z-40 w-[240px] overflow-hidden rounded-[22px] border border-black/10 bg-white/90 shadow-2xl backdrop-blur-xl">
       <div className="p-2">
         <a
-          className="flex items-center justify-center gap-2 rounded-2xl bg-[#C8A45D] px-3 py-3 text-[12px] font-semibold text-black hover:brightness-110"
+          className="flex items-center justify-center gap-2 rounded-2xl px-3 py-3 text-[12px] font-semibold text-black hover:brightness-110"
+          style={{ backgroundColor: GOLD }}
           href={CONTACT.whatsappLink}
           target="_blank"
           rel="noreferrer"
@@ -340,38 +358,63 @@ function ContactDock() {
         </a>
 
         <div className="mt-2 grid gap-1">
-          <a
-            className="flex items-center gap-2 rounded-2xl px-3 py-2 text-[12px] font-semibold text-black/75 hover:bg-[#C8A45D] hover:text-black"
-            href={CONTACT.phoneTel}
-          >
-            <Icon name="phone" />
-            Call
-          </a>
+          {[
+            {
+              label: "Call",
+              icon: "phone" as const,
+              href: CONTACT.phoneTel,
+              external: false,
+            },
+            {
+              label: "Telegram",
+              icon: "telegram" as const,
+              href: CONTACT.telegramLink,
+              external: true,
+            },
+            {
+              label: "Email",
+              icon: "mail" as const,
+              href: buildMailto({
+                subject: "Keystne enquiry",
+                body: "Hi Keystne team,\n\nI'd like to enquire about:\n\nName:\nPhone:\nPreferred contact time:\nDetails:\n\nThank you",
+              }),
+              external: false,
+            },
+          ].map((item) => (
+            <a
+              key={item.label}
+              className="flex items-center gap-2 rounded-2xl px-3 py-2 text-[12px] font-semibold text-black/75 hover:text-black"
+              style={{}}
+              onMouseEnter={(e) => (
+                (e.currentTarget.style.backgroundColor = GOLD),
+                (e.currentTarget.style.color = "black")
+              )}
+              onMouseLeave={(e) => (
+                (e.currentTarget.style.backgroundColor = "transparent"),
+                (e.currentTarget.style.color = "rgba(0,0,0,0.75)")
+              )}
+              href={item.href}
+              target={item.external ? "_blank" : undefined}
+              rel={item.external ? "noreferrer" : undefined}
+            >
+              <Icon name={item.icon} />
+              {item.label}
+            </a>
+          ))}
 
-          <a
-            className="flex items-center gap-2 rounded-2xl px-3 py-2 text-[12px] font-semibold text-black/75 hover:bg-[#C8A45D] hover:text-black"
-            href={CONTACT.telegramLink}
-            target="_blank"
-            rel="noreferrer"
+          <div
+            className="flex items-center gap-2 rounded-2xl px-3 py-2 text-[12px] font-semibold text-black/55"
+            onMouseEnter={(e) => (
+              (e.currentTarget.style.backgroundColor = GOLD),
+              (e.currentTarget.style.color = "black")
+            )}
+            onMouseLeave={(e) => (
+              (e.currentTarget.style.backgroundColor = "transparent"),
+              (e.currentTarget.style.color = "rgba(0,0,0,0.55)")
+            )}
           >
-            <Icon name="telegram" />
-            Telegram
-          </a>
-
-          <a
-            className="flex items-center gap-2 rounded-2xl px-3 py-2 text-[12px] font-semibold text-black/75 hover:bg-[#C8A45D] hover:text-black"
-            href={buildMailto({
-              subject: "Keystne enquiry",
-              body: "Hi Keystne team,\n\nI'd like to enquire about:\n\nName:\nPhone:\nPreferred contact time:\nDetails:\n\nThank you",
-            })}
-          >
-            <Icon name="mail" />
-            Email
-          </a>
-
-          <div className="flex items-center gap-2 rounded-2xl px-3 py-2 text-[12px] font-semibold text-black/55">
             <Icon name="wechat" />
-            {CONTACT.wechatText || "WeChat ID: keystne"}
+            {CONTACT.wechatText}
           </div>
         </div>
 
@@ -388,10 +431,6 @@ function ContactDock() {
   );
 }
 
-/**
- * Wizard steps
- * Keep not-too-personal; still useful.
- */
 type Step = {
   id: string;
   title: string;
@@ -403,9 +442,8 @@ type Step = {
 const RELOCATION_STEPS: Step[] = [
   {
     id: "origin",
-    title: "Origin & eligibility",
-    question:
-      "Where are you relocating from, and what’s your preferred timeline?",
+    title: "Origin & timeline",
+    question: "Where are you relocating from, and when?",
     render: (s, setS) => (
       <div className="grid gap-4 md:grid-cols-2">
         <FieldShell label="Origin country" required>
@@ -415,7 +453,6 @@ const RELOCATION_STEPS: Step[] = [
             placeholder="e.g., United Kingdom"
           />
         </FieldShell>
-
         <FieldShell label="Timeline" required>
           <SelectInput
             value={s.timeline}
@@ -425,11 +462,7 @@ const RELOCATION_STEPS: Step[] = [
         </FieldShell>
 
         <div className="md:col-span-2">
-          <FieldShell
-            label="Visa direction"
-            hint="We keep it high-level here."
-            required
-          >
+          <FieldShell label="Visa direction" hint="High-level only" required>
             <Segmented
               value={s.visaDirection}
               onChange={(v) => setS({ visaDirection: v })}
@@ -454,8 +487,7 @@ const RELOCATION_STEPS: Step[] = [
   {
     id: "household",
     title: "Household",
-    question:
-      "Tell us the household setup — so we tailor area and cost guidance.",
+    question: "What does your household look like?",
     render: (s, setS) => (
       <div className="grid gap-4 md:grid-cols-2">
         <FieldShell label="Household" required>
@@ -465,7 +497,6 @@ const RELOCATION_STEPS: Step[] = [
             options={["Single", "Couple", "Family"]}
           />
         </FieldShell>
-
         <FieldShell label="Children" required>
           <Segmented
             value={s.kids}
@@ -473,7 +504,6 @@ const RELOCATION_STEPS: Step[] = [
             options={["No", "Yes"]}
           />
         </FieldShell>
-
         <div className="md:col-span-2">
           <FieldShell label="Lifestyle preference" required>
             <Segmented
@@ -495,7 +525,7 @@ const RELOCATION_STEPS: Step[] = [
   {
     id: "area",
     title: "Area direction",
-    question: "Do you already have a preferred Dubai area?",
+    question: "Do you already know your preferred area?",
     render: (s, setS) => (
       <div className="grid gap-4 md:grid-cols-2">
         <FieldShell label="Preferred area known?" required>
@@ -512,16 +542,16 @@ const RELOCATION_STEPS: Step[] = [
               value={s.area}
               onChange={(v) => setS({ area: v })}
               options={[
-                "Downtown Dubai",
+                "Downtown",
                 "Dubai Marina",
                 "Business Bay",
                 "Palm Jumeirah",
                 "JBR",
                 "JLT",
-                "Dubai Hills Estate",
+                "Dubai Hills",
                 "Arabian Ranches",
                 "JVC",
-                "Dubai Creek Harbour",
+                "Creek Harbour",
                 "City Walk",
                 "Al Barsha",
               ]}
@@ -537,12 +567,9 @@ const RELOCATION_STEPS: Step[] = [
           </FieldShell>
         )}
 
-        <div className="md:col-span-2">
-          <div className="rounded-2xl border border-black/10 bg-black/[0.03] p-4 text-sm text-black/70">
-            <span className="font-semibold text-black">Note:</span> If you’re
-            not sure on area, we’ll recommend 2–4 communities that match your
-            lifestyle + budget.
-          </div>
+        <div className="md:col-span-2 rounded-2xl border border-black/10 bg-black/[0.03] p-4 text-sm text-black/70">
+          If you’re unsure, we’ll recommend 2–4 communities that match your
+          lifestyle + budget.
         </div>
       </div>
     ),
@@ -555,35 +582,21 @@ const RELOCATION_STEPS: Step[] = [
     },
   },
   {
-    id: "salary",
-    title: "Cost-of-living preview",
-    question:
-      "Optional: compare your current monthly position vs a Dubai estimate.",
+    id: "cost",
+    title: "Cost preview",
+    question: "Optional: quick cost-of-living preview (screening only).",
     render: (s, setS) => (
       <div className="grid gap-4 md:grid-cols-2">
-        <div className="md:col-span-2">
-          <div className="text-sm text-black/70">
-            This is a premium preview (lead-gen). We’ll refine with live data
-            later.
-          </div>
-        </div>
-
-        <FieldShell
-          label="Your monthly take-home (current)"
-          hint="Your currency"
-          required
-        >
+        <FieldShell label="Monthly take-home (current)" hint="Your currency">
           <TextInput
             value={s.currentSalary}
             onChange={(v) => setS({ currentSalary: v })}
             placeholder="e.g., 6500"
           />
         </FieldShell>
-
         <FieldShell
-          label="Your monthly fixed costs (current)"
+          label="Monthly fixed costs (current)"
           hint="Rent + bills + transport"
-          required
         >
           <TextInput
             value={s.currentFixed}
@@ -591,11 +604,9 @@ const RELOCATION_STEPS: Step[] = [
             placeholder="e.g., 3200"
           />
         </FieldShell>
-
         <FieldShell
-          label="Your monthly discretionary (current)"
+          label="Monthly discretionary (current)"
           hint="Food + lifestyle"
-          required
         >
           <TextInput
             value={s.currentDiscretionary}
@@ -603,8 +614,7 @@ const RELOCATION_STEPS: Step[] = [
             placeholder="e.g., 900"
           />
         </FieldShell>
-
-        <FieldShell label="Priority" required>
+        <FieldShell label="Priority">
           <Segmented
             value={s.priority}
             onChange={(v) => setS({ priority: v })}
@@ -641,63 +651,39 @@ const RELOCATION_STEPS: Step[] = [
             </div>
           </div>
           <div className="mt-3 text-[11px] text-black/45">
-            * These are indicative ranges for screening only. We’ll validate
-            during your call.
+            * Indicative only (screening). We validate on the call.
           </div>
         </div>
       </div>
     ),
-    validate: (s) => {
-      // optional-ish but we keep it simple: allow blank and still proceed
-      // If any one salary field is filled, require all to avoid nonsense.
-      const any =
-        (s.currentSalary || "").trim() ||
-        (s.currentFixed || "").trim() ||
-        (s.currentDiscretionary || "").trim();
-      if (!any) return null;
-
-      if (!String(s.currentSalary || "").trim())
-        return "Add monthly take-home.";
-      if (!String(s.currentFixed || "").trim())
-        return "Add monthly fixed costs.";
-      if (!String(s.currentDiscretionary || "").trim())
-        return "Add discretionary spend.";
-      if (!s.priority) return "Choose a priority.";
-      return null;
-    },
+    validate: () => null,
   },
   {
-    id: "confirm",
+    id: "finish",
     title: "Finish",
-    question: "One last step — we generate a clear relocation plan summary.",
+    question: "We generate your relocation plan summary.",
     render: (s, setS) => (
       <div className="space-y-4">
         <div className="rounded-2xl border border-black/10 bg-black/[0.03] p-4">
           <div className="text-[11px] tracking-[0.22em] text-black/55">
-            SUMMARY
-          </div>
-          <div className="mt-2 text-sm text-black/70">
-            Based on your inputs, we’ll propose:
+            WHAT YOU GET
           </div>
           <ul className="mt-3 space-y-2 text-sm text-black/75">
-            <li className="flex items-center gap-2">
-              <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-[#C8A45D] text-black">
-                <Icon name="check" className="h-4 w-4" />
-              </span>
-              A recommended area shortlist aligned to your lifestyle
-            </li>
-            <li className="flex items-center gap-2">
-              <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-[#C8A45D] text-black">
-                <Icon name="check" className="h-4 w-4" />
-              </span>
-              A high-level visa pathway timeline (guidance only)
-            </li>
-            <li className="flex items-center gap-2">
-              <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-[#C8A45D] text-black">
-                <Icon name="check" className="h-4 w-4" />
-              </span>
-              A relocation flow plan — from discovery → keys-in-hand
-            </li>
+            {[
+              "Area shortlist aligned to your lifestyle",
+              "High-level visa pathway timeline guidance",
+              "Relocation plan from discovery → keys-in-hand",
+            ].map((t) => (
+              <li key={t} className="flex items-center gap-2">
+                <span
+                  className="inline-flex h-6 w-6 items-center justify-center rounded-full text-black"
+                  style={{ backgroundColor: GOLD }}
+                >
+                  <Icon name="check" className="h-4 w-4" />
+                </span>
+                {t}
+              </li>
+            ))}
           </ul>
         </div>
 
@@ -705,7 +691,7 @@ const RELOCATION_STEPS: Step[] = [
           <textarea
             value={s.notes}
             onChange={(e) => setS({ notes: e.target.value })}
-            placeholder="e.g., need school options, prefer quiet building, near metro, etc."
+            placeholder="e.g., school options, quiet building, near metro…"
             className="h-28 w-full resize-none bg-transparent text-sm text-black outline-none placeholder:text-black/30"
           />
         </FieldShell>
@@ -719,7 +705,7 @@ const VIEWING_STEPS: Step[] = [
   {
     id: "budget",
     title: "Budget & horizon",
-    question: "What’s your investment budget range and buying horizon?",
+    question: "What’s your budget and buying horizon?",
     render: (s, setS) => (
       <div className="grid gap-4 md:grid-cols-2">
         <FieldShell label="Budget range (AED)" required>
@@ -729,7 +715,6 @@ const VIEWING_STEPS: Step[] = [
             options={["750k – 1.5M", "1.5M – 3M", "3M – 6M", "6M+"]}
           />
         </FieldShell>
-
         <FieldShell label="Buying horizon" required>
           <SelectInput
             value={s.horizon}
@@ -737,7 +722,6 @@ const VIEWING_STEPS: Step[] = [
             options={["Now", "1–3 months", "3–6 months", "6+ months"]}
           />
         </FieldShell>
-
         <div className="md:col-span-2">
           <FieldShell label="Goal" required>
             <Segmented
@@ -774,7 +758,6 @@ const VIEWING_STEPS: Step[] = [
             ]}
           />
         </FieldShell>
-
         <FieldShell
           label="Viewing intensity"
           required
@@ -786,10 +769,9 @@ const VIEWING_STEPS: Step[] = [
             options={["Light", "Balanced", "Intensive"]}
           />
         </FieldShell>
-
         <div className="md:col-span-2 rounded-2xl border border-black/10 bg-black/[0.03] p-4 text-sm text-black/70">
-          We’ll organise a curated itinerary: airport pickup (optional), area
-          brief, and a viewing schedule that fits your pace.
+          We organise a curated itinerary: shortlist → area brief → viewings →
+          next steps.
         </div>
       </div>
     ),
@@ -812,7 +794,6 @@ const VIEWING_STEPS: Step[] = [
             options={["Apartment", "Townhouse", "Villa", "Mixed / not sure"]}
           />
         </FieldShell>
-
         <FieldShell label="Market type" required>
           <SelectInput
             value={s.marketType}
@@ -820,7 +801,6 @@ const VIEWING_STEPS: Step[] = [
             options={["Off-plan", "Secondary", "Both"]}
           />
         </FieldShell>
-
         <div className="md:col-span-2">
           <FieldShell label="Bedrooms (preference)" required>
             <Segmented
@@ -872,7 +852,7 @@ const VIEWING_STEPS: Step[] = [
         )}
 
         <div className="md:col-span-2 rounded-2xl border border-black/10 bg-black/[0.03] p-4 text-sm text-black/70">
-          We’ll shortlist 6–10 options, then schedule viewings around your
+          We shortlist 6–10 options, then schedule viewings around your
           itinerary.
         </div>
       </div>
@@ -889,7 +869,7 @@ const VIEWING_STEPS: Step[] = [
   {
     id: "finish",
     title: "Finish",
-    question: "We generate a viewing-trip plan summary and checklist.",
+    question: "We generate your viewing-trip plan summary.",
     render: (s, setS) => (
       <div className="space-y-4">
         <div className="rounded-2xl border border-black/10 bg-black/[0.03] p-4">
@@ -897,24 +877,21 @@ const VIEWING_STEPS: Step[] = [
             WHAT YOU GET
           </div>
           <ul className="mt-3 space-y-2 text-sm text-black/75">
-            <li className="flex items-center gap-2">
-              <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-[#C8A45D] text-black">
-                <Icon name="check" className="h-4 w-4" />
-              </span>
-              Curated itinerary + scheduled viewings
-            </li>
-            <li className="flex items-center gap-2">
-              <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-[#C8A45D] text-black">
-                <Icon name="check" className="h-4 w-4" />
-              </span>
-              Shortlist aligned to your budget + goal
-            </li>
-            <li className="flex items-center gap-2">
-              <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-[#C8A45D] text-black">
-                <Icon name="check" className="h-4 w-4" />
-              </span>
-              Offer + paperwork guidance (high-level)
-            </li>
+            {[
+              "Curated itinerary + scheduled viewings",
+              "Shortlist aligned to your budget + goal",
+              "Offer + paperwork guidance (high-level)",
+            ].map((t) => (
+              <li key={t} className="flex items-center gap-2">
+                <span
+                  className="inline-flex h-6 w-6 items-center justify-center rounded-full text-black"
+                  style={{ backgroundColor: GOLD }}
+                >
+                  <Icon name="check" className="h-4 w-4" />
+                </span>
+                {t}
+              </li>
+            ))}
           </ul>
         </div>
 
@@ -922,7 +899,7 @@ const VIEWING_STEPS: Step[] = [
           <textarea
             value={s.notes}
             onChange={(e) => setS({ notes: e.target.value })}
-            placeholder="e.g., want ready tenants, prefer payment plan, only near metro, etc."
+            placeholder="e.g., prefer payment plan, near metro, ready tenants…"
             className="h-28 w-full resize-none bg-transparent text-sm text-black outline-none placeholder:text-black/30"
           />
         </FieldShell>
@@ -938,27 +915,24 @@ function computeCurrentNet(s: any) {
   const disc = Number(
     String(s.currentDiscretionary || "").replace(/[^0-9.]/g, "")
   );
-  if (!salary || (!fixed && !disc)) return "—";
+  if (!salary) return "—";
   const net = salary - fixed - disc;
   if (!isFinite(net)) return "—";
   return `${net.toFixed(0)}`;
 }
 
 function computeDubaiEstimate(s: any) {
-  // Simple, transparent estimate by household + kids + budget band + priority.
-  // (Placeholder; will be replaced with live data later)
   const household = s.household || "Single";
   const kids = s.kids || "No";
   const band = s.budgetBand || "";
   const priority = s.priority || "Balance";
 
-  let base = 12000; // AED-ish monthly "all-in" reference point
+  let base = 12000;
   if (household === "Couple") base += 4000;
   if (household === "Family") base += 9000;
   if (kids === "Yes") base += 4500;
 
   if (band.includes("< 8k")) base -= 2500;
-  if (band.includes("8–15k")) base += 0;
   if (band.includes("15–25k")) base += 4500;
   if (band.includes("25k+")) base += 9000;
 
@@ -969,7 +943,6 @@ function computeDubaiEstimate(s: any) {
 }
 
 function computeRunwayWeeks(s: any) {
-  // a soft suggestion
   const household = s.household || "Single";
   const kids = s.kids || "No";
   let weeks = 6;
@@ -1001,8 +974,7 @@ function buildRelocationSummary(state: any) {
     lines.push(`Budget band: ${state.budgetBand || "-"}`);
   lines.push("");
   lines.push(`Estimated runway: ${computeRunwayWeeks(state)}`);
-  const dubai = computeDubaiEstimate(state);
-  if (dubai !== "—") lines.push(`Dubai monthly estimate: ${dubai}`);
+  lines.push(`Dubai monthly estimate: ${computeDubaiEstimate(state)}`);
   lines.push("");
   if (state.notes?.trim()) {
     lines.push("Notes:");
@@ -1034,16 +1006,19 @@ function buildViewingSummary(state: any) {
     }`
   );
   lines.push("");
-  lines.push(
-    "We will propose: shortlist → viewing itinerary → offer support (high-level)."
-  );
-  lines.push("");
   if (state.notes?.trim()) {
     lines.push("Notes:");
     lines.push(state.notes.trim());
   }
   return lines.join("\n");
 }
+
+type EmailCapture = {
+  name: string;
+  email: string;
+  email2: string;
+  phone: string;
+};
 
 function Wizard({
   open,
@@ -1058,8 +1033,6 @@ function Wizard({
 
   const [stepIdx, setStepIdx] = useState(0);
   const [state, setState] = useState<any>(() => ({}));
-
-  // email modal + booking modal
   const [emailOpen, setEmailOpen] = useState(false);
   const [bookOpen, setBookOpen] = useState(false);
 
@@ -1091,11 +1064,8 @@ function Wizard({
   }, [open, flow]);
 
   const current = steps[stepIdx];
-
   const setPatch = (patch: any) => setState((p: any) => ({ ...p, ...patch }));
-
   const err = useMemo(() => current?.validate(state) ?? null, [current, state]);
-
   const canNext = !err;
 
   const summaryText = useMemo(() => {
@@ -1117,8 +1087,7 @@ function Wizard({
   }, [capture]);
 
   const canEmail = Object.keys(emailErrors).length === 0;
-
-  const openEmail = () => setEmailOpen(true);
+  const canBook = !!callDate && !!callTime && canEmail;
 
   const sendEmail = () => {
     const body = [
@@ -1137,10 +1106,6 @@ function Wizard({
 
     window.location.href = buildMailto({ subject, body });
   };
-
-  const bookCall = () => setBookOpen(true);
-
-  const canBook = !!callDate && !!callTime && canEmail;
 
   const sendBooking = () => {
     const body = [
@@ -1165,27 +1130,10 @@ function Wizard({
 
   const headline =
     flow === "relocation" ? "Relocation Concierge" : "Curated Viewing Trip";
-
   const subtitle =
     flow === "relocation"
-      ? "A guided relocation plan — including area shortlist and onboarding support."
-      : "We organise your Dubai visit — shortlist + viewings + a clear process to buy with confidence.";
-
-  // lightweight “animated” step transition (CSS only)
-  const key = `${flow}-${stepIdx}`;
-  const contentRef = useRef<HTMLDivElement | null>(null);
-
-  useEffect(() => {
-    const el = contentRef.current;
-    if (!el) return;
-    el.classList.remove("opacity-100", "translate-y-0");
-    el.classList.add("opacity-0", "translate-y-2");
-    const t = window.setTimeout(() => {
-      el.classList.remove("opacity-0", "translate-y-2");
-      el.classList.add("opacity-100", "translate-y-0");
-    }, 10);
-    return () => window.clearTimeout(t);
-  }, [key]);
+      ? "A guided relocation plan — shortlist, timeline, onboarding support."
+      : "We organise your Dubai visit — shortlist + viewings + a clear process.";
 
   return (
     <>
@@ -1200,7 +1148,6 @@ function Wizard({
         widthClass="max-w-4xl"
       >
         <div className="grid gap-6 md:grid-cols-[1.2fr_0.8fr]">
-          {/* Left: wizard */}
           <div className="space-y-5">
             <Progress step={stepIdx} total={steps.length} />
 
@@ -1212,13 +1159,7 @@ function Wizard({
                 {current.question}
               </div>
 
-              <div
-                ref={contentRef}
-                className="mt-5 transition-all duration-300 opacity-100 translate-y-0"
-                key={key}
-              >
-                {current.render(state, setPatch)}
-              </div>
+              <div className="mt-5">{current.render(state, setPatch)}</div>
 
               {err ? (
                 <div className="mt-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
@@ -1230,7 +1171,7 @@ function Wizard({
                 <button
                   type="button"
                   onClick={() => setStepIdx((i) => Math.max(0, i - 1))}
-                  className="rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm font-semibold text-black/70 hover:bg-black/5"
+                  className="rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm font-semibold text-black/70 hover:bg-black/5 disabled:opacity-40"
                   disabled={stepIdx === 0}
                 >
                   Back
@@ -1246,9 +1187,10 @@ function Wizard({
                     className={[
                       "inline-flex items-center justify-center gap-2 rounded-2xl px-5 py-3 text-sm font-semibold transition",
                       canNext
-                        ? "bg-[#C8A45D] text-black hover:brightness-110"
+                        ? "text-black hover:brightness-110"
                         : "bg-black/10 text-black/35 cursor-not-allowed",
                     ].join(" ")}
+                    style={canNext ? { backgroundColor: GOLD } : undefined}
                     disabled={!canNext}
                   >
                     Next <Icon name="arrow" />
@@ -1257,14 +1199,15 @@ function Wizard({
                   <div className="flex flex-col items-end gap-2 sm:flex-row sm:items-center">
                     <button
                       type="button"
-                      onClick={openEmail}
-                      className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#C8A45D] px-5 py-3 text-sm font-semibold text-black hover:brightness-110"
+                      onClick={() => setEmailOpen(true)}
+                      className="inline-flex items-center justify-center gap-2 rounded-2xl px-5 py-3 text-sm font-semibold text-black hover:brightness-110"
+                      style={{ backgroundColor: GOLD }}
                     >
                       Email this summary <Icon name="mail" />
                     </button>
                     <button
                       type="button"
-                      onClick={bookCall}
+                      onClick={() => setBookOpen(true)}
                       className="inline-flex items-center justify-center gap-2 rounded-2xl border border-black/10 bg-white px-5 py-3 text-sm font-semibold text-black/70 hover:bg-black/5"
                     >
                       Book a call <Icon name="calendar" />
@@ -1275,7 +1218,6 @@ function Wizard({
             </div>
           </div>
 
-          {/* Right: live summary panel */}
           <div className="space-y-4">
             <div className="rounded-[24px] border border-black/10 bg-black p-5 text-white shadow-sm">
               <div className="text-[11px] tracking-[0.22em] text-white/55">
@@ -1292,20 +1234,20 @@ function Wizard({
                 WHY THIS WORKS
               </div>
               <div className="mt-2 text-sm text-black/70">
-                You get a clear plan instantly. We get the exact context we need
-                to tailor the next step — without wasting time.
+                You get a clear plan instantly. We get the context to tailor the
+                next step — without wasting time.
               </div>
             </div>
           </div>
         </div>
       </Modal>
 
-      {/* Email capture modal */}
+      {/* Email capture */}
       <Modal
         open={emailOpen}
         onClose={() => setEmailOpen(false)}
         title="Send your summary"
-        subtitle="We’ll receive your details + the summary via email (lead-gen)."
+        subtitle="We’ll receive your details + summary via email."
         widthClass="max-w-2xl"
       >
         <div className="grid gap-4 md:grid-cols-2">
@@ -1370,9 +1312,10 @@ function Wizard({
               className={[
                 "inline-flex items-center justify-center gap-2 rounded-2xl px-5 py-3 text-sm font-semibold transition",
                 canEmail
-                  ? "bg-[#C8A45D] text-black hover:brightness-110"
+                  ? "text-black hover:brightness-110"
                   : "bg-black/10 text-black/35 cursor-not-allowed",
               ].join(" ")}
+              style={canEmail ? { backgroundColor: GOLD } : undefined}
             >
               Open email <Icon name="arrow" />
             </button>
@@ -1380,7 +1323,7 @@ function Wizard({
         </div>
       </Modal>
 
-      {/* Booking modal */}
+      {/* Booking */}
       <Modal
         open={bookOpen}
         onClose={() => setBookOpen(false)}
@@ -1426,21 +1369,11 @@ function Wizard({
           </FieldShell>
 
           <FieldShell label="Preferred date (Dubai time)" required>
-            <input
-              value={callDate}
-              onChange={(e) => setCallDate(e.target.value)}
-              type="date"
-              className="w-full bg-transparent text-sm text-black outline-none"
-            />
+            <TextInput value={callDate} onChange={setCallDate} type="date" />
           </FieldShell>
 
           <FieldShell label="Preferred time (Dubai time)" required>
-            <input
-              value={callTime}
-              onChange={(e) => setCallTime(e.target.value)}
-              type="time"
-              className="w-full bg-transparent text-sm text-black outline-none"
-            />
+            <TextInput value={callTime} onChange={setCallTime} type="time" />
           </FieldShell>
 
           <div className="md:col-span-2 flex items-center justify-end gap-3">
@@ -1458,9 +1391,10 @@ function Wizard({
               className={[
                 "inline-flex items-center justify-center gap-2 rounded-2xl px-5 py-3 text-sm font-semibold transition",
                 canBook
-                  ? "bg-[#C8A45D] text-black hover:brightness-110"
+                  ? "text-black hover:brightness-110"
                   : "bg-black/10 text-black/35 cursor-not-allowed",
               ].join(" ")}
+              style={canBook ? { backgroundColor: GOLD } : undefined}
             >
               Open booking email <Icon name="arrow" />
             </button>
@@ -1471,12 +1405,98 @@ function Wizard({
   );
 }
 
+function TopNav({ hidden }: { hidden: boolean }) {
+  return (
+    <div
+      className={[
+        "fixed left-0 right-0 top-0 z-50 transition-all duration-300",
+        hidden
+          ? "-translate-y-28 opacity-0 pointer-events-none"
+          : "translate-y-0 opacity-100",
+      ].join(" ")}
+    >
+      <div className="mx-auto max-w-6xl px-4 pt-4">
+        <div className="flex items-center justify-between rounded-3xl border border-white/10 bg-black/70 px-5 py-4 text-white shadow-2xl backdrop-blur-xl">
+          <Link href="/" className="text-xl font-semibold tracking-tight">
+            keystne
+          </Link>
+
+          <div className="hidden items-center gap-6 text-sm font-semibold md:flex">
+            {[
+              { label: "Concierge", href: "/concierge" },
+              { label: "Discover Communities", href: "/communities" },
+              { label: "Investments", href: "/investments" },
+              { label: "Long-Term", href: "/long-term" },
+              { label: "Property Management", href: "/management" },
+              { label: "About", href: "/about" },
+            ].map((i) => (
+              <Link
+                key={i.label}
+                href={i.href}
+                className="transition"
+                onMouseEnter={(e) => (e.currentTarget.style.color = GOLD)}
+                onMouseLeave={(e) =>
+                  (e.currentTarget.style.color = "rgba(255,255,255,0.85)")
+                }
+                style={{ color: "rgba(255,255,255,0.85)" }}
+              >
+                {i.label}
+              </Link>
+            ))}
+          </div>
+
+          <div className="text-[11px] tracking-[0.22em] text-white/70">
+            DUBAI
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PageFooter() {
+  return (
+    <footer className="bg-black text-white">
+      <div className="mx-auto max-w-6xl px-4 py-10">
+        <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
+          <div>
+            <div className="text-lg font-semibold tracking-tight">keystne</div>
+            <div className="mt-2 max-w-md text-sm text-white/70">
+              Premium real estate services in Dubai — concierge relocation,
+              brokerage & investments, long-term rentals, and property
+              management.
+            </div>
+          </div>
+
+          <div className="grid gap-2 text-sm text-white/75">
+            <div className="flex flex-wrap gap-4">
+              {[
+                "Concierge",
+                "Discover Communities",
+                "Investments",
+                "Long-Term",
+                "Property Management",
+                "About",
+              ].map((t) => (
+                <span key={t} className="text-white/65">
+                  {t}
+                </span>
+              ))}
+            </div>
+            <div className="text-[11px] text-white/45">
+              © {new Date().getFullYear()} Keystne. All rights reserved.
+            </div>
+          </div>
+        </div>
+      </div>
+    </footer>
+  );
+}
+
 export default function ConciergePage() {
-  // NAV hide-on-scroll-down (page-only)
   const [navHidden, setNavHidden] = useState(false);
   const lastY = useRef(0);
 
-  // Wizard open state
   const [flow, setFlow] = useState<ConciergeFlow>(null);
   const wizardOpen = flow !== null;
 
@@ -1485,7 +1505,6 @@ export default function ConciergePage() {
       const y = window.scrollY || 0;
       const delta = y - lastY.current;
 
-      // Only toggle after a small threshold (prevents jitter)
       if (delta > 10) setNavHidden(true);
       if (delta < -10) setNavHidden(false);
 
@@ -1499,19 +1518,9 @@ export default function ConciergePage() {
 
   return (
     <div className="min-h-screen bg-white text-black">
-      {/* Wrapper to hide/show nav on scroll direction */}
-      <div
-        className={[
-          "fixed left-0 right-0 top-0 z-50 transition-all duration-300",
-          navHidden
-            ? "-translate-y-28 opacity-0 pointer-events-none"
-            : "translate-y-0 opacity-100",
-        ].join(" ")}
-      >
-        <KeystneNav />
-      </div>
+      <TopNav hidden={navHidden} />
 
-      {/* HERO (video stays) */}
+      {/* HERO */}
       <section className="relative min-h-[70vh] overflow-hidden">
         <video
           className="absolute inset-0 h-full w-full object-cover opacity-85"
@@ -1541,7 +1550,8 @@ export default function ConciergePage() {
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <button
                 onClick={() => setFlow("relocation")}
-                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#C8A45D] px-6 py-4 text-sm font-semibold text-black hover:brightness-110"
+                className="inline-flex items-center justify-center gap-2 rounded-2xl px-6 py-4 text-sm font-semibold text-black hover:brightness-110"
+                style={{ backgroundColor: GOLD }}
               >
                 Relocation concierge <Icon name="arrow" />
               </button>
@@ -1564,7 +1574,7 @@ export default function ConciergePage() {
         </div>
       </section>
 
-      {/* BODY — light premium */}
+      {/* BODY */}
       <section className="bg-white">
         <div className="mx-auto max-w-6xl px-4 py-14">
           <div className="text-[11px] tracking-[0.22em] text-black/55">
@@ -1574,15 +1584,14 @@ export default function ConciergePage() {
             Pick what you need — we’ll do the rest.
           </h2>
           <p className="mt-3 max-w-3xl text-sm text-black/65">
-            We keep the questions simple (lead-gen), then generate a clear
-            summary you can email to yourself and use to book a call.
+            Quick questions, premium experience. You get a clean summary you can
+            email to yourself and use to book a call.
           </p>
 
-          {/* Two long cards side-by-side */}
           <div className="mt-10 grid gap-4 md:grid-cols-2">
             <button
               onClick={() => setFlow("relocation")}
-              className="group relative overflow-hidden rounded-[28px] border border-black/10 bg-white text-left shadow-ks transition hover:-translate-y-1"
+              className="group relative overflow-hidden rounded-[28px] border border-black/10 bg-white text-left shadow-2xl transition hover:-translate-y-1"
             >
               <div className="absolute inset-0 bg-gradient-to-br from-black/[0.02] via-transparent to-[#C8A45D]/10" />
               <div className="relative p-7">
@@ -1593,11 +1602,20 @@ export default function ConciergePage() {
                   Relocation concierge
                 </div>
                 <div className="mt-3 text-sm text-black/70">
-                  A guided plan: visa direction, area shortlist, and a smooth
-                  move-in flow — handled personally.
+                  Visa direction, area shortlist, and a smooth move-in flow —
+                  handled personally.
                 </div>
 
-                <div className="mt-6 inline-flex items-center gap-2 rounded-full bg-black px-4 py-2 text-[12px] font-semibold text-white group-hover:bg-[#C8A45D] group-hover:text-black">
+                <div
+                  className="mt-6 inline-flex items-center gap-2 rounded-full bg-black px-4 py-2 text-[12px] font-semibold text-white group-hover:text-black"
+                  style={{}}
+                  onMouseEnter={(e) =>
+                    (e.currentTarget.style.backgroundColor = GOLD)
+                  }
+                  onMouseLeave={(e) =>
+                    (e.currentTarget.style.backgroundColor = "black")
+                  }
+                >
                   Start <Icon name="arrow" className="h-4 w-4" />
                 </div>
               </div>
@@ -1605,7 +1623,7 @@ export default function ConciergePage() {
 
             <button
               onClick={() => setFlow("viewing")}
-              className="group relative overflow-hidden rounded-[28px] border border-black/10 bg-white text-left shadow-ks transition hover:-translate-y-1"
+              className="group relative overflow-hidden rounded-[28px] border border-black/10 bg-white text-left shadow-2xl transition hover:-translate-y-1"
             >
               <div className="absolute inset-0 bg-gradient-to-br from-black/[0.02] via-transparent to-[#C8A45D]/10" />
               <div className="relative p-7">
@@ -1620,7 +1638,15 @@ export default function ConciergePage() {
                   buy with confidence.
                 </div>
 
-                <div className="mt-6 inline-flex items-center gap-2 rounded-full bg-black px-4 py-2 text-[12px] font-semibold text-white group-hover:bg-[#C8A45D] group-hover:text-black">
+                <div
+                  className="mt-6 inline-flex items-center gap-2 rounded-full bg-black px-4 py-2 text-[12px] font-semibold text-white group-hover:text-black"
+                  onMouseEnter={(e) =>
+                    (e.currentTarget.style.backgroundColor = GOLD)
+                  }
+                  onMouseLeave={(e) =>
+                    (e.currentTarget.style.backgroundColor = "black")
+                  }
+                >
                   Start <Icon name="arrow" className="h-4 w-4" />
                 </div>
               </div>
@@ -1635,15 +1661,14 @@ export default function ConciergePage() {
               We keep it premium. We keep it personal.
             </div>
             <div className="mt-3 max-w-3xl text-sm text-white/80">
-              This is designed to be quick, not “boring form-filling”. You
-              answer a few guided prompts, then you get a clean summary + an
-              easy next step.
+              Designed to feel easy — not boring form-filling. Answer a few
+              prompts, get a clean plan.
             </div>
           </div>
         </div>
       </section>
 
-      <KeystneFooter />
+      <PageFooter />
       <ContactDock />
 
       <Wizard open={wizardOpen} flow={flow} onClose={() => setFlow(null)} />
