@@ -8,19 +8,16 @@ import { CONTACT, HOME_VIDEOS } from "../../components/site/config";
 /**
  * CONCIERGE PAGE — UPDATED (as per latest notes)
  * ONLY changes made:
- * 1) Remove the two HERO buttons (gold “Relocation concierge” + “Curated viewing trip”) — remove full box + move content up
- * 2) Move “LIVE SUMMARY” (black side box) to the END (final step), make it WHITE, and ensure it summarizes everything
- * 3) Make immigration guidance clearly origin-market aware (e.g., Canada/US/UK 90/180 visitor rule etc. + residency pathways high-level)
- * 4) Remove “Already resident” option from Relocation visa direction
- * 5) Apply the same “summary at the end + white” approach to Curated Viewing Trip
- * Everything else kept as-is.
+ * 1) Remove Dubai Time pill entirely (and “Monday” with it) + move content up
+ *    → “Choose a path” now sits immediately after the hero copy.
+ * 2) Remove ALL “Summary” UI and summary sending:
+ *    - Remove the end-of-wizard Summary card
+ *    - Remove “Email this summary” button + Email modal
+ *    - Booking email no longer includes a summary block
+ * Everything else unchanged.
  */
 
 type ConciergeFlow = "relocation" | "viewing" | null;
-
-function clamp(n: number, a: number, b: number) {
-  return Math.max(a, Math.min(b, n));
-}
 
 function isValidEmail(email: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email.trim());
@@ -319,34 +316,6 @@ function Progress({ step, total }: { step: number; total: number }) {
   );
 }
 
-/** Dubai time pill (unchanged) */
-function DubaiTimePill() {
-  const [now, setNow] = useState<Date>(() => new Date());
-  useEffect(() => {
-    const t = window.setInterval(() => setNow(new Date()), 1000);
-    return () => window.clearInterval(t);
-  }, []);
-  const timeText = useMemo(() => {
-    try {
-      return new Intl.DateTimeFormat("en-GB", {
-        timeZone: "Asia/Dubai",
-        weekday: "short",
-        hour: "2-digit",
-        minute: "2-digit",
-      }).format(now);
-    } catch {
-      return now.toLocaleTimeString();
-    }
-  }, [now]);
-
-  return (
-    <div className="inline-flex items-center gap-2 rounded-full border border-black/10 bg-white/90 px-4 py-2 text-[12px] font-semibold text-black shadow-ks backdrop-blur">
-      <span className="h-2 w-2 rounded-full bg-[#C8A45D]" />
-      Dubai time: <span className="text-black/75">{timeText}</span>
-    </div>
-  );
-}
-
 /** Contact dock — unchanged */
 function ContactDock() {
   return (
@@ -458,7 +427,7 @@ const COUNTRIES = [
   "Colombia",
 ];
 
-/* ---------- Wizard (updated summary positioning + origin-aware guidance) ---------- */
+/* ---------- Wizard (summary removed) ---------- */
 type Step = {
   id: string;
   title: string;
@@ -482,7 +451,6 @@ function computeRunwayWeeksRelocation(s: any) {
 /**
  * Origin-aware visitor entry + quick “what it usually means” for first steps.
  * High-level (lead-gen). Rules can change; we verify on a call.
- * (Checked Dec 2025: Canada travel advice, UAE embassy for US, UK FCDO, UAE gov guidance.)
  */
 function originEntryNotes(originCountry?: string) {
   const c = (originCountry || "").trim();
@@ -517,7 +485,6 @@ function originEntryNotes(originCountry?: string) {
     ];
   }
 
-  // Keep it clean for all other countries (we verify per nationality)
   return [
     "Entry requirements depend on nationality (some are 30-day, some 90-day, some require pre-arranged visas)",
     "We’ll confirm the exact entry rule for your passport before you travel",
@@ -534,7 +501,6 @@ function visaGuidance(visaDirection: string, originCountry?: string) {
     "If family is relocating: sponsorship pathway and document attestation",
   ];
 
-  // Short “entry” section first (origin-aware)
   const header = ["Entry / first arrival (high-level):", ...entry].map(
     (x) => x
   );
@@ -560,7 +526,6 @@ function visaGuidance(visaDirection: string, originCountry?: string) {
     ];
   }
 
-  // "Need guidance" default
   return [
     ...header,
     "",
@@ -599,7 +564,6 @@ const RELOCATION_STEPS: Step[] = [
             hint="High-level guidance. We confirm on a call."
             required
           >
-            {/* Removed “Already resident” */}
             <Segmented
               value={s.visaDirection}
               onChange={(v) => setS({ visaDirection: v })}
@@ -717,8 +681,7 @@ const RELOCATION_STEPS: Step[] = [
   {
     id: "finish",
     title: "Finish",
-    question:
-      "We’ll generate a clear relocation plan summary — tailored to you.",
+    question: "We’ll generate a clear relocation plan — tailored to you.",
     render: (s, setS) => (
       <div className="space-y-4">
         <div className="rounded-2xl border border-black/10 bg-black/[0.03] p-4">
@@ -1058,89 +1021,6 @@ type EmailCapture = {
   phone: string;
 };
 
-function buildRelocationSummary(state: any) {
-  const runway = computeRunwayWeeksRelocation(state);
-  const lines: string[] = [];
-
-  lines.push("CONCIERGE — RELOCATION SUMMARY");
-  lines.push("");
-  lines.push(`Origin country: ${state.originCountry || "-"}`);
-  lines.push(`Timeline: ${state.timeline || "-"}`);
-  lines.push(`Visa direction: ${state.visaDirection || "-"}`);
-  lines.push("");
-  lines.push(`Household: ${state.household || "-"}`);
-  lines.push(`Children: ${state.kids || "-"}`);
-  lines.push(`Lifestyle: ${state.lifestyle || "-"}`);
-  lines.push("");
-  lines.push(
-    `Preferred area: ${
-      state.areaKnown === "Known" ? state.area || "-" : "Not sure"
-    }`
-  );
-  if (state.areaKnown !== "Known")
-    lines.push(`Budget band: ${state.budgetBand || "-"}`);
-  lines.push("");
-  lines.push(`Suggested runway: ~${runway} weeks`);
-  lines.push("");
-
-  lines.push("Immigration (origin-aware, high-level):");
-  visaGuidance(
-    state.visaDirection || "Need guidance",
-    state.originCountry
-  ).forEach((v: string) => lines.push(`- ${v}`));
-
-  lines.push("");
-  lines.push("Key move checklist:");
-  [
-    "Document pack: passport, photos, proof of income",
-    "Area shortlist + school direction (if needed)",
-    "Housing approach: lease vs buy-first",
-    "First 30-days checklist: SIM, banking, transport, building setup",
-  ].forEach((x) => lines.push(`- ${x}`));
-
-  lines.push("");
-  if (state.notes?.trim()) {
-    lines.push("Notes:");
-    lines.push(state.notes.trim());
-  }
-
-  return lines.join("\n");
-}
-
-function buildViewingSummary(state: any) {
-  const lines: string[] = [];
-
-  lines.push("CONCIERGE — CURATED VIEWING TRIP SUMMARY");
-  lines.push("");
-  lines.push(`Budget range: ${state.budgetRange || "-"}`);
-  lines.push(`Buying horizon: ${state.horizon || "-"}`);
-  lines.push(`Goal: ${state.goal || "-"}`);
-  lines.push("");
-  lines.push(`Travel window: ${state.travelWindow || "-"}`);
-  lines.push(`Intensity: ${state.intensity || "-"}`);
-  lines.push("");
-  lines.push(`Property type: ${state.propertyType || "-"}`);
-  lines.push(`Market type: ${state.marketType || "-"}`);
-  lines.push(`Bedrooms: ${state.beds || "-"}`);
-  lines.push("");
-  lines.push(
-    `Areas: ${
-      state.areasKnown === "Known"
-        ? state.areas || "-"
-        : `Recommend (${state.vibe || "-"})`
-    }`
-  );
-  lines.push("");
-  lines.push("10-step tick-box plan is generated on the final step.");
-  lines.push("");
-  if (state.notes?.trim()) {
-    lines.push("Notes:");
-    lines.push(state.notes.trim());
-  }
-
-  return lines.join("\n");
-}
-
 function Wizard({
   open,
   onClose,
@@ -1155,7 +1035,6 @@ function Wizard({
   const [stepIdx, setStepIdx] = useState(0);
   const [state, setState] = useState<any>(() => ({}));
 
-  const [emailOpen, setEmailOpen] = useState(false);
   const [bookOpen, setBookOpen] = useState(false);
 
   const [capture, setCapture] = useState<EmailCapture>({
@@ -1170,7 +1049,6 @@ function Wizard({
   const resetAll = () => {
     setStepIdx(0);
     setState({});
-    setEmailOpen(false);
     setBookOpen(false);
     setCapture({ name: "", email: "", email2: "", phone: "" });
     setCallDate("");
@@ -1188,14 +1066,6 @@ function Wizard({
   const err = useMemo(() => current?.validate(state) ?? null, [current, state]);
   const canNext = !err;
 
-  const summaryText = useMemo(() => {
-    if (flow === "relocation") return buildRelocationSummary(state);
-    if (flow === "viewing") return buildViewingSummary(state);
-    return "";
-  }, [flow, state]);
-
-  const isFinalStep = stepIdx === steps.length - 1;
-
   const emailErrors = useMemo(() => {
     const e: Record<string, string> = {};
     if (!capture.name.trim()) e.name = "Add your name.";
@@ -1208,35 +1078,22 @@ function Wizard({
     return e;
   }, [capture]);
 
-  const canEmail = Object.keys(emailErrors).length === 0;
-  const canBook = !!callDate && !!callTime && canEmail;
-
-  const sendEmail = () => {
-    const body = [
-      `Client name: ${capture.name}`,
-      `Client email: ${capture.email}`,
-      `Client phone: ${capture.phone}`,
-      "",
-      summaryText,
-    ].join("\n");
-    const subject =
-      flow === "relocation"
-        ? "Keystne — Concierge (Relocation) summary"
-        : "Keystne — Concierge (Curated Viewing Trip) summary";
-    window.location.href = buildMailto({ subject, body });
-  };
+  const canBook =
+    !!callDate && !!callTime && Object.keys(emailErrors).length === 0;
 
   const sendBooking = () => {
     const body = [
       "Booking request",
+      "",
+      `Flow: ${
+        flow === "relocation" ? "Relocation Concierge" : "Curated Viewing Trip"
+      }`,
       "",
       `Client name: ${capture.name}`,
       `Client email: ${capture.email}`,
       `Client phone: ${capture.phone}`,
       "",
       `Preferred call: ${callDate} at ${callTime} (Dubai time)`,
-      "",
-      summaryText,
     ].join("\n");
     const subject =
       flow === "relocation"
@@ -1252,7 +1109,6 @@ function Wizard({
       ? "A guided relocation plan — area shortlist + onboarding support."
       : "We organise your Dubai visit — shortlist + viewings + a clear process to buy with confidence.";
 
-  // tiny smooth transition (kept)
   const key = `${flow}-${stepIdx}`;
   const contentRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
@@ -1279,7 +1135,6 @@ function Wizard({
         subtitle={subtitle}
         widthClass="max-w-4xl"
       >
-        {/* Single-column layout now (live summary moved to end) */}
         <div className="space-y-4">
           <div className="space-y-5">
             <Progress step={stepIdx} total={steps.length} />
@@ -1334,39 +1189,17 @@ function Wizard({
                     Next <Icon name="arrow" />
                   </button>
                 ) : (
-                  <div className="flex flex-col items-end gap-2 sm:flex-row sm:items-center">
-                    <button
-                      type="button"
-                      onClick={() => setEmailOpen(true)}
-                      className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#C8A45D] px-5 py-3 text-sm font-semibold text-black hover:brightness-110"
-                    >
-                      Email this summary <Icon name="mail" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setBookOpen(true)}
-                      className="inline-flex items-center justify-center gap-2 rounded-2xl border border-black/10 bg-white px-5 py-3 text-sm font-semibold text-black/70 hover:bg-black/5"
-                    >
-                      Book a call <Icon name="calendar" />
-                    </button>
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setBookOpen(true)}
+                    className="inline-flex items-center justify-center gap-2 rounded-2xl border border-black/10 bg-white px-5 py-3 text-sm font-semibold text-black/70 hover:bg-black/5"
+                  >
+                    Book a call <Icon name="calendar" />
+                  </button>
                 )}
               </div>
             </div>
           </div>
-
-          {/* SUMMARY AT THE END (FINAL STEP ONLY) — WHITE */}
-          {isFinalStep ? (
-            <div className="rounded-[24px] border border-black/10 bg-white p-5 shadow-sm">
-              <div className="text-[11px] tracking-[0.22em] text-black/55">
-                SUMMARY
-              </div>
-              <div className="mt-3 whitespace-pre-wrap text-sm text-black/80">
-                {summaryText ||
-                  "Summary will appear here once your answers are complete."}
-              </div>
-            </div>
-          ) : null}
 
           <div className="rounded-[24px] border border-black/10 bg-white p-5 shadow-sm">
             <div className="text-[11px] tracking-[0.22em] text-black/55">
@@ -1376,72 +1209,6 @@ function Wizard({
               You get a clear plan instantly. We get the context we need to
               tailor the next step — without wasting time.
             </div>
-          </div>
-        </div>
-      </Modal>
-
-      <Modal
-        open={emailOpen}
-        onClose={() => setEmailOpen(false)}
-        title="Send your summary"
-        subtitle="We’ll receive your details + the summary via email (lead-gen)."
-        widthClass="max-w-2xl"
-      >
-        <div className="grid gap-4 md:grid-cols-2">
-          <FieldShell label="Full name" required error={emailErrors.name}>
-            <TextInput
-              value={capture.name}
-              onChange={(v) => setCapture((p) => ({ ...p, name: v }))}
-              placeholder="Your name"
-            />
-          </FieldShell>
-          <FieldShell
-            label="Phone (with country code)"
-            required
-            error={emailErrors.phone}
-          >
-            <TextInput
-              value={capture.phone}
-              onChange={(v) => setCapture((p) => ({ ...p, phone: v }))}
-              placeholder="+44… / +971…"
-            />
-          </FieldShell>
-          <FieldShell label="Email" required error={emailErrors.email}>
-            <TextInput
-              value={capture.email}
-              onChange={(v) => setCapture((p) => ({ ...p, email: v }))}
-              placeholder="name@email.com"
-            />
-          </FieldShell>
-          <FieldShell label="Confirm email" required error={emailErrors.email2}>
-            <TextInput
-              value={capture.email2}
-              onChange={(v) => setCapture((p) => ({ ...p, email2: v }))}
-              placeholder="Repeat email"
-            />
-          </FieldShell>
-
-          <div className="md:col-span-2 flex items-center justify-end gap-3">
-            <button
-              type="button"
-              onClick={() => setEmailOpen(false)}
-              className="rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm font-semibold text-black/70 hover:bg-black/5"
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              onClick={sendEmail}
-              disabled={!canEmail}
-              className={[
-                "inline-flex items-center justify-center gap-2 rounded-2xl px-5 py-3 text-sm font-semibold transition",
-                canEmail
-                  ? "bg-[#C8A45D] text-black hover:brightness-110"
-                  : "bg-black/10 text-black/35 cursor-not-allowed",
-              ].join(" ")}
-            >
-              Open email <Icon name="arrow" />
-            </button>
           </div>
         </div>
       </Modal>
@@ -1580,7 +1347,9 @@ export default function ConciergePage() {
           playsInline
         />
         <div className="absolute inset-0 bg-gradient-to-b from-black/65 via-black/25 to-white" />
-        <div className="relative mx-auto max-w-6xl px-4 pb-12 pt-28">
+
+        {/* CHANGE: Reduced bottom padding slightly so “Choose a path” sits immediately after hero copy */}
+        <div className="relative mx-auto max-w-6xl px-4 pb-6 pt-28">
           <div className="max-w-3xl">
             <div className="text-[11px] tracking-[0.22em] text-white/80">
               CONCIERGE
@@ -1593,23 +1362,14 @@ export default function ConciergePage() {
               curated viewing trip and invest with clarity.
             </p>
 
-            {/* CHANGE: Removed the full HERO buttons box (Relocation / Viewing trip) */}
+            {/* (Hero buttons were removed previously — left unchanged) */}
           </div>
         </div>
       </section>
 
-      {/* Dubai time pill — unchanged */}
+      {/* BODY — moved up (Dubai time section removed) */}
       <section className="bg-white">
-        <div className="mx-auto max-w-6xl px-4">
-          <div className="-mt-6 flex justify-center">
-            <DubaiTimePill />
-          </div>
-        </div>
-      </section>
-
-      {/* BODY — light premium */}
-      <section className="bg-white">
-        <div className="mx-auto max-w-6xl px-4 py-12">
+        <div className="mx-auto max-w-6xl px-4 pt-0 pb-12">
           <div className="text-[11px] tracking-[0.22em] text-black/55">
             CHOOSE A PATH
           </div>
@@ -1617,8 +1377,8 @@ export default function ConciergePage() {
             Pick what you need — we’ll do the rest.
           </h2>
           <p className="mt-3 max-w-3xl text-sm text-black/65">
-            We keep the questions simple (lead-gen), then generate a clear
-            summary you can email to yourself and use to book a call.
+            We keep the questions simple (lead-gen), then guide you to the next
+            step.
           </p>
 
           <div className="mt-6 grid gap-4 md:grid-cols-2">
@@ -1667,7 +1427,7 @@ export default function ConciergePage() {
             </button>
           </div>
 
-          {/* PROMISE — unchanged from your provided code */}
+          {/* PROMISE — unchanged */}
           <div className="mt-8 rounded-[28px] border border-black/10 bg-white p-7 text-black shadow-sm">
             <div className="text-[11px] tracking-[0.22em] text-black/55">
               PROMISE
@@ -1677,8 +1437,7 @@ export default function ConciergePage() {
             </div>
             <div className="mt-3 max-w-3xl text-sm text-black/70">
               This is designed to be quick, not “boring form-filling”. You
-              answer a few guided prompts, then you get a clean summary + an
-              easy next step.
+              answer a few guided prompts, then you get a clean next step.
             </div>
           </div>
         </div>
