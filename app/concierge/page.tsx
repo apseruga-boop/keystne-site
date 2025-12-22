@@ -2,50 +2,34 @@
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import KeystneNav from "../../components/site/KeystneNav";
+import KeystneFooter from "../../components/site/KeystneFooter";
+import { CONTACT, HOME_VIDEOS } from "../../components/site/config";
 
 /**
- * app/concierge/page.tsx
- * Self-contained Concierge page (no config imports) to avoid “nothing changed” + export errors.
- *
- * Includes:
- * - Nav hides on scroll down, shows on scroll up
- * - Video hero
- * - Two concierge paths (Relocation / Curated viewing trip)
- * - Premium wizard modal (5 steps each) + summary
- * - Email summary + book call (mailto lead-gen)
- * - White contact dock with gold hover
- *
- * Colors:
- * - Gold: #C8A45D
+ * PAGE 2 — CONCIERGE (UPDATED)
+ * Changes (ONLY what Arthur asked):
+ * - Remove “Dubai” from top pill (now just CONCIERGE)
+ * - Add Dubai time pill (same vibe as homepage; stable position)
+ * - Remove “Back to home”
+ * - Add “Compare” calculator button (salary + FX to AED, T&Cs, contact / refresh / email)
+ * - Reduce spacing above option cards
+ * - PROMISE box -> white background + black text; bring it up a bit
+ * - Relocation wizard: origin country dropdown (no typing)
+ * - Remove monthly running costs step from relocation (handled by Compare)
+ * - Relocation summary: more bespoke + visa pathway guidance (high-level) + key move checklist
+ * - Viewing trip finish: 10-step tick-box plan (generated from answers)
+ * - Keep everything else as-is
  */
 
-const GOLD = "#C8A45D";
-
-// Replace these later with your real details
-const CONTACT = {
-  phoneDisplay: "+971 XX XXX XXXX",
-  phoneTel: "tel:+971XXXXXXXXX",
-  whatsappLink: "https://wa.me/971XXXXXXXXX",
-  telegramLink: "https://t.me/keystne",
-  wechatText: "WeChat ID: keystne",
-  emailArthur: "arthur@keystne.com",
-  emailStuart: "stuart@keystne.com",
-};
-
-// Replace later with your owned/licensed video
-const HOME_VIDEOS = {
-  hero: "https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4",
-};
-
 type ConciergeFlow = "relocation" | "viewing" | null;
-type CallWhen = "ASAP" | "1 month" | "2 months" | "6 months";
-
-function isValidEmail(email: string) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email.trim());
-}
 
 function clamp(n: number, a: number, b: number) {
   return Math.max(a, Math.min(b, n));
+}
+
+function isValidEmail(email: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email.trim());
 }
 
 function buildMailto(args: { subject: string; body: string }) {
@@ -56,7 +40,7 @@ function buildMailto(args: { subject: string; body: string }) {
   return `mailto:${to}?cc=${cc}&subject=${subject}&body=${body}`;
 }
 
-/** Small inline icons (no external icon libs) */
+/** Simple inline icons (NO lucide-react) */
 function Icon({
   name,
   className = "h-4 w-4",
@@ -70,7 +54,8 @@ function Icon({
     | "wechat"
     | "arrow"
     | "check"
-    | "x";
+    | "x"
+    | "refresh";
   className?: string;
 }) {
   const common = {
@@ -78,10 +63,7 @@ function Icon({
     fill: "none",
     stroke: "currentColor",
     strokeWidth: 2,
-    strokeLinecap: "round" as const,
-    strokeLinejoin: "round" as const,
   };
-
   switch (name) {
     case "arrow":
       return (
@@ -103,6 +85,13 @@ function Icon({
           <path d="M6 6l12 12" />
         </svg>
       );
+    case "refresh":
+      return (
+        <svg viewBox="0 0 24 24" {...common}>
+          <path d="M21 12a9 9 0 1 1-3-6.7" />
+          <path d="M21 3v6h-6" />
+        </svg>
+      );
     case "phone":
       return (
         <svg viewBox="0 0 24 24" {...common}>
@@ -112,8 +101,8 @@ function Icon({
     case "mail":
       return (
         <svg viewBox="0 0 24 24" {...common}>
-          <path d="M4 6h16v12H4z" />
-          <path d="M4 7l8 6 8-6" />
+          <path d="M4 4h16v16H4z" />
+          <path d="M4 6l8 6 8-6" />
         </svg>
       );
     case "calendar":
@@ -167,7 +156,6 @@ function Modal({
   widthClass?: string;
 }) {
   if (!open) return null;
-
   return (
     <div className="fixed inset-0 z-[70] flex items-end justify-center p-4 md:items-center">
       <button
@@ -177,7 +165,7 @@ function Modal({
       />
       <div
         className={[
-          "relative w-full overflow-hidden rounded-[28px] border border-black/10 bg-white shadow-2xl",
+          "relative w-full overflow-hidden rounded-[28px] border border-black/10 bg-white shadow-ks",
           widthClass,
         ].join(" ")}
       >
@@ -243,19 +231,16 @@ function TextInput({
   value,
   onChange,
   placeholder,
-  type = "text",
 }: {
   value: string;
   onChange: (v: string) => void;
   placeholder?: string;
-  type?: string;
 }) {
   return (
     <input
       value={value}
       onChange={(e) => onChange(e.target.value)}
       placeholder={placeholder}
-      type={type}
       className="w-full bg-transparent text-sm text-black outline-none placeholder:text-black/30"
     />
   );
@@ -306,10 +291,9 @@ function Segmented({
             className={[
               "rounded-full px-3 py-2 text-[12px] font-semibold transition",
               active
-                ? "text-black"
+                ? "bg-[#C8A45D] text-black"
                 : "bg-black/5 text-black/70 hover:bg-black/10",
             ].join(" ")}
-            style={active ? { backgroundColor: GOLD } : undefined}
             type="button"
           >
             {o}
@@ -333,22 +317,50 @@ function Progress({ step, total }: { step: number; total: number }) {
       </div>
       <div className="h-2 w-full overflow-hidden rounded-full bg-black/10">
         <div
-          className="h-full rounded-full transition-all"
-          style={{ width: `${pct}%`, backgroundColor: GOLD }}
+          className="h-full rounded-full bg-[#C8A45D] transition-all"
+          style={{ width: `${pct}%` }}
         />
       </div>
     </div>
   );
 }
 
-/** White dock + gold hover */
+/** Dubai time pill (stable) */
+function DubaiTimePill() {
+  const [now, setNow] = useState<Date>(() => new Date());
+  useEffect(() => {
+    const t = window.setInterval(() => setNow(new Date()), 1000);
+    return () => window.clearInterval(t);
+  }, []);
+
+  const timeText = useMemo(() => {
+    try {
+      return new Intl.DateTimeFormat("en-GB", {
+        timeZone: "Asia/Dubai",
+        weekday: "short",
+        hour: "2-digit",
+        minute: "2-digit",
+      }).format(now);
+    } catch {
+      return now.toLocaleTimeString();
+    }
+  }, [now]);
+
+  return (
+    <div className="inline-flex items-center gap-2 rounded-full border border-black/10 bg-white/90 px-4 py-2 text-[12px] font-semibold text-black shadow-ks backdrop-blur">
+      <span className="h-2 w-2 rounded-full bg-[#C8A45D]" />
+      Dubai time: <span className="text-black/75">{timeText}</span>
+    </div>
+  );
+}
+
+/** Contact dock — matches locked homepage style (white dock, gold hover) */
 function ContactDock() {
   return (
-    <div className="fixed bottom-5 right-5 z-40 w-[240px] overflow-hidden rounded-[22px] border border-black/10 bg-white/90 shadow-2xl backdrop-blur-xl">
+    <div className="fixed bottom-5 right-5 z-40 w-[240px] overflow-hidden rounded-[22px] border border-black/10 bg-white/90 shadow-ks backdrop-blur-xl">
       <div className="p-2">
         <a
-          className="flex items-center justify-center gap-2 rounded-2xl px-3 py-3 text-[12px] font-semibold text-black hover:brightness-110"
-          style={{ backgroundColor: GOLD }}
+          className="flex items-center justify-center gap-2 rounded-2xl bg-[#C8A45D] px-3 py-3 text-[12px] font-semibold text-black hover:brightness-110"
           href={CONTACT.whatsappLink}
           target="_blank"
           rel="noreferrer"
@@ -358,63 +370,38 @@ function ContactDock() {
         </a>
 
         <div className="mt-2 grid gap-1">
-          {[
-            {
-              label: "Call",
-              icon: "phone" as const,
-              href: CONTACT.phoneTel,
-              external: false,
-            },
-            {
-              label: "Telegram",
-              icon: "telegram" as const,
-              href: CONTACT.telegramLink,
-              external: true,
-            },
-            {
-              label: "Email",
-              icon: "mail" as const,
-              href: buildMailto({
-                subject: "Keystne enquiry",
-                body: "Hi Keystne team,\n\nI'd like to enquire about:\n\nName:\nPhone:\nPreferred contact time:\nDetails:\n\nThank you",
-              }),
-              external: false,
-            },
-          ].map((item) => (
-            <a
-              key={item.label}
-              className="flex items-center gap-2 rounded-2xl px-3 py-2 text-[12px] font-semibold text-black/75 hover:text-black"
-              style={{}}
-              onMouseEnter={(e) => (
-                (e.currentTarget.style.backgroundColor = GOLD),
-                (e.currentTarget.style.color = "black")
-              )}
-              onMouseLeave={(e) => (
-                (e.currentTarget.style.backgroundColor = "transparent"),
-                (e.currentTarget.style.color = "rgba(0,0,0,0.75)")
-              )}
-              href={item.href}
-              target={item.external ? "_blank" : undefined}
-              rel={item.external ? "noreferrer" : undefined}
-            >
-              <Icon name={item.icon} />
-              {item.label}
-            </a>
-          ))}
-
-          <div
-            className="flex items-center gap-2 rounded-2xl px-3 py-2 text-[12px] font-semibold text-black/55"
-            onMouseEnter={(e) => (
-              (e.currentTarget.style.backgroundColor = GOLD),
-              (e.currentTarget.style.color = "black")
-            )}
-            onMouseLeave={(e) => (
-              (e.currentTarget.style.backgroundColor = "transparent"),
-              (e.currentTarget.style.color = "rgba(0,0,0,0.55)")
-            )}
+          <a
+            className="flex items-center gap-2 rounded-2xl px-3 py-2 text-[12px] font-semibold text-black/75 hover:bg-[#C8A45D] hover:text-black"
+            href={CONTACT.phoneTel}
           >
+            <Icon name="phone" />
+            Call
+          </a>
+
+          <a
+            className="flex items-center gap-2 rounded-2xl px-3 py-2 text-[12px] font-semibold text-black/75 hover:bg-[#C8A45D] hover:text-black"
+            href={CONTACT.telegramLink}
+            target="_blank"
+            rel="noreferrer"
+          >
+            <Icon name="telegram" />
+            Telegram
+          </a>
+
+          <a
+            className="flex items-center gap-2 rounded-2xl px-3 py-2 text-[12px] font-semibold text-black/75 hover:bg-[#C8A45D] hover:text-black"
+            href={buildMailto({
+              subject: "Keystne enquiry",
+              body: "Hi Keystne team,\n\nI'd like to enquire about:\n\nName:\nPhone:\nPreferred contact time:\nDetails:\n\nThank you",
+            })}
+          >
+            <Icon name="mail" />
+            Email
+          </a>
+
+          <div className="flex items-center gap-2 rounded-2xl px-3 py-2 text-[12px] font-semibold text-black/55">
             <Icon name="wechat" />
-            {CONTACT.wechatText}
+            {CONTACT.wechatText || "WeChat ID: keystne"}
           </div>
         </div>
 
@@ -431,6 +418,360 @@ function ContactDock() {
   );
 }
 
+/* ---------- Compare Calculator (modal) ---------- */
+
+const COUNTRIES = [
+  "United Arab Emirates",
+  "United Kingdom",
+  "United States",
+  "Canada",
+  "Australia",
+  "New Zealand",
+  "Ireland",
+  "France",
+  "Germany",
+  "Netherlands",
+  "Belgium",
+  "Spain",
+  "Italy",
+  "Portugal",
+  "Switzerland",
+  "Sweden",
+  "Norway",
+  "Denmark",
+  "Finland",
+  "South Africa",
+  "Nigeria",
+  "Ghana",
+  "Kenya",
+  "Uganda",
+  "Rwanda",
+  "Tanzania",
+  "Ethiopia",
+  "Egypt",
+  "Morocco",
+  "Algeria",
+  "Tunisia",
+  "Turkey",
+  "Saudi Arabia",
+  "Qatar",
+  "Kuwait",
+  "Bahrain",
+  "Oman",
+  "India",
+  "Pakistan",
+  "Bangladesh",
+  "Sri Lanka",
+  "Philippines",
+  "Indonesia",
+  "Malaysia",
+  "Singapore",
+  "China",
+  "Japan",
+  "South Korea",
+  "Brazil",
+  "Mexico",
+  "Argentina",
+  "Colombia",
+];
+
+const COUNTRY_TO_CURRENCY: Record<string, string> = {
+  "United Arab Emirates": "AED",
+  "United Kingdom": "GBP",
+  "United States": "USD",
+  Canada: "CAD",
+  Australia: "AUD",
+  "New Zealand": "NZD",
+  Ireland: "EUR",
+  France: "EUR",
+  Germany: "EUR",
+  Netherlands: "EUR",
+  Belgium: "EUR",
+  Spain: "EUR",
+  Italy: "EUR",
+  Portugal: "EUR",
+  Switzerland: "CHF",
+  Sweden: "SEK",
+  Norway: "NOK",
+  Denmark: "DKK",
+  Finland: "EUR",
+  "South Africa": "ZAR",
+  Nigeria: "NGN",
+  Ghana: "GHS",
+  Kenya: "KES",
+  Uganda: "UGX",
+  Rwanda: "RWF",
+  Tanzania: "TZS",
+  Ethiopia: "ETB",
+  Egypt: "EGP",
+  Morocco: "MAD",
+  Algeria: "DZD",
+  Tunisia: "TND",
+  Turkey: "TRY",
+  "Saudi Arabia": "SAR",
+  Qatar: "QAR",
+  Kuwait: "KWD",
+  Bahrain: "BHD",
+  Oman: "OMR",
+  India: "INR",
+  Pakistan: "PKR",
+  Bangladesh: "BDT",
+  "Sri Lanka": "LKR",
+  Philippines: "PHP",
+  Indonesia: "IDR",
+  Malaysia: "MYR",
+  Singapore: "SGD",
+  China: "CNY",
+  Japan: "JPY",
+  "South Korea": "KRW",
+  Brazil: "BRL",
+  Mexico: "MXN",
+  Argentina: "ARS",
+  Colombia: "COP",
+};
+
+function parseNumber(v: string) {
+  const n = Number(String(v || "").replace(/[^0-9.]/g, ""));
+  return Number.isFinite(n) ? n : 0;
+}
+
+function CompareModal({
+  open,
+  onClose,
+}: {
+  open: boolean;
+  onClose: () => void;
+}) {
+  const [country, setCountry] = useState("United Kingdom");
+  const [currency, setCurrency] = useState("GBP");
+  const [salary, setSalary] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [fx, setFx] = useState<number | null>(null);
+  const [fxNote, setFxNote] = useState<string>("");
+
+  useEffect(() => {
+    const cur = COUNTRY_TO_CURRENCY[country] || "";
+    if (cur) setCurrency(cur);
+  }, [country]);
+
+  const salaryNum = useMemo(() => parseNumber(salary), [salary]);
+
+  const salaryAED = useMemo(() => {
+    if (!fx || !salaryNum) return null;
+    return salaryNum * fx;
+  }, [fx, salaryNum]);
+
+  const refresh = async () => {
+    setLoading(true);
+    setFx(null);
+    setFxNote("");
+
+    try {
+      // free FX endpoint (no key) — base = selected currency
+      const res = await fetch(`https://open.er-api.com/v6/latest/${currency}`);
+      const json = await res.json();
+      const rate = json?.rates?.AED;
+
+      if (!rate || !Number.isFinite(rate)) throw new Error("No AED rate");
+      setFx(rate);
+
+      const updated = json?.time_last_update_utc || "";
+      setFxNote(updated ? `FX updated: ${updated}` : "FX updated (live)");
+    } catch {
+      setFxNote("Could not fetch live FX right now — try refresh again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!open) return;
+    // fetch once when opening
+    refresh();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
+  const emailBreakdown = () => {
+    const body = [
+      "KEYSTNE — COST COMPARISON (LEAD-GEN)",
+      "",
+      `Country: ${country}`,
+      `Currency: ${currency}`,
+      `Monthly salary (input): ${salary || "-"}`,
+      fx ? `FX: 1 ${currency} = ${fx} AED` : "FX: (not available)",
+      salaryAED
+        ? `Salary in AED (estimate): ${salaryAED.toFixed(0)} AED / month`
+        : "Salary in AED: —",
+      "",
+      "T&Cs:",
+      "- FX rates are indicative and can change. This is guidance, not financial advice.",
+      "- Cost-of-living varies by lifestyle, household size, and location in Dubai.",
+      "- We confirm assumptions during a call.",
+      "",
+      fxNote ? `Note: ${fxNote}` : "",
+    ].join("\n");
+
+    window.location.href = buildMailto({
+      subject: "Keystne — Cost comparison breakdown",
+      body,
+    });
+  };
+
+  const contactUs = () => {
+    const body = [
+      "Hi Keystne team,",
+      "",
+      "I’d like help with relocating / comparing costs.",
+      "",
+      `Country: ${country}`,
+      `Currency: ${currency}`,
+      `Monthly salary: ${salary || "-"}`,
+      fx ? `FX used: 1 ${currency} = ${fx} AED` : "",
+      salaryAED ? `AED estimate: ${salaryAED.toFixed(0)} AED / month` : "",
+      "",
+      "Please contact me to discuss next steps.",
+    ].join("\n");
+
+    window.location.href = buildMailto({
+      subject: "Keystne — Contact request (Cost comparison)",
+      body,
+    });
+  };
+
+  return (
+    <Modal
+      open={open}
+      onClose={onClose}
+      title="Compare: your country vs Dubai"
+      subtitle="Quick salary → AED conversion with simple guidance (lead-gen)."
+      widthClass="max-w-3xl"
+    >
+      <div className="grid gap-5 md:grid-cols-2">
+        <FieldShell label="Country (where you're coming from)" required>
+          <SelectInput
+            value={country}
+            onChange={setCountry}
+            options={COUNTRIES}
+          />
+        </FieldShell>
+
+        <FieldShell
+          label="Currency"
+          required
+          hint="Auto-set from country (editable)"
+        >
+          <TextInput
+            value={currency}
+            onChange={setCurrency}
+            placeholder="e.g., GBP"
+          />
+        </FieldShell>
+
+        <div className="md:col-span-2">
+          <FieldShell
+            label="Monthly salary (your country)"
+            required
+            hint="Numbers only"
+          >
+            <TextInput
+              value={salary}
+              onChange={setSalary}
+              placeholder="e.g., 6500"
+            />
+          </FieldShell>
+        </div>
+
+        <div className="md:col-span-2 rounded-2xl border border-black/10 bg-black/[0.03] p-4">
+          <div className="text-[11px] tracking-[0.22em] text-black/55">
+            RESULT
+          </div>
+
+          <div className="mt-3 grid gap-3 md:grid-cols-3">
+            <div className="rounded-2xl bg-white p-4 shadow-sm">
+              <div className="text-[11px] text-black/50">FX rate</div>
+              <div className="mt-1 text-lg font-semibold text-black">
+                {fx ? `1 ${currency} = ${fx.toFixed(4)} AED` : "—"}
+              </div>
+              <div className="mt-1 text-[11px] text-black/45">
+                {fxNote || ""}
+              </div>
+            </div>
+
+            <div className="rounded-2xl bg-white p-4 shadow-sm">
+              <div className="text-[11px] text-black/50">
+                Salary in AED (estimate)
+              </div>
+              <div className="mt-1 text-lg font-semibold text-black">
+                {salaryAED ? `${salaryAED.toFixed(0)} AED / mo` : "—"}
+              </div>
+              <div className="mt-1 text-[11px] text-black/45">
+                Uses live FX when available.
+              </div>
+            </div>
+
+            <div className="rounded-2xl bg-white p-4 shadow-sm">
+              <div className="text-[11px] text-black/50">Next best step</div>
+              <div className="mt-1 text-lg font-semibold text-black">
+                Book a call
+              </div>
+              <div className="mt-1 text-[11px] text-black/45">
+                We tailor to household + lifestyle.
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-4 rounded-2xl border border-black/10 bg-white p-4 text-[12px] text-black/70">
+            <div className="font-semibold text-black">T&Cs</div>
+            <ul className="mt-2 list-disc space-y-1 pl-5">
+              <li>FX rates are indicative and can change daily.</li>
+              <li>This tool gives guidance only — not financial advice.</li>
+              <li>
+                Cost-of-living depends on lifestyle, household size and area
+                choice.
+              </li>
+              <li>We confirm assumptions during your call.</li>
+            </ul>
+          </div>
+
+          <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
+            <button
+              type="button"
+              onClick={refresh}
+              className="inline-flex items-center justify-center gap-2 rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm font-semibold text-black/70 hover:bg-black/5"
+            >
+              <Icon name="refresh" />
+              Refresh FX
+            </button>
+            <button
+              type="button"
+              onClick={contactUs}
+              className="inline-flex items-center justify-center gap-2 rounded-2xl bg-black px-4 py-3 text-sm font-semibold text-white hover:bg-black/90"
+            >
+              Contact us <Icon name="arrow" />
+            </button>
+            <button
+              type="button"
+              onClick={emailBreakdown}
+              className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#C8A45D] px-4 py-3 text-sm font-semibold text-black hover:brightness-110"
+              disabled={!salaryNum}
+            >
+              Email breakdown <Icon name="mail" />
+            </button>
+          </div>
+
+          {loading ? (
+            <div className="mt-3 text-[11px] text-black/55">
+              Fetching live FX…
+            </div>
+          ) : null}
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
+/* ---------- Wizard (updated relocation + viewing) ---------- */
+
 type Step = {
   id: string;
   title: string;
@@ -439,20 +780,73 @@ type Step = {
   validate: (state: any) => string | null;
 };
 
+function computeRunwayWeeksRelocation(s: any) {
+  // clean logic (no scribbles / no cost math)
+  const household = s.household || "Single";
+  const kids = s.kids || "No";
+  const areaKnown = s.areaKnown || "Not sure";
+
+  let weeks = 6;
+  if (household === "Couple") weeks += 1;
+  if (household === "Family") weeks += 2;
+  if (kids === "Yes") weeks += 3;
+  if (areaKnown === "Not sure") weeks += 2;
+
+  return weeks;
+}
+
+function visaGuidance(visaDirection: string) {
+  // High-level guidance only (safe + lead-gen friendly)
+  const common = [
+    "Passport validity and entry permissions (depend on nationality)",
+    "Emirates ID setup and medical checks (where relevant)",
+    "Banking + proof of address / salary documentation",
+    "Family sponsorship pathway (if applicable)",
+  ];
+
+  if (visaDirection === "Employment visa") {
+    return [
+      "Employer-led employment visa (most common)",
+      "Timeline depends on employer onboarding and approvals",
+      ...common,
+    ];
+  }
+  if (visaDirection === "Investor visa") {
+    return [
+      "Investor / partner pathway (structure depends on investment type)",
+      "Golden Visa eligibility can apply for some profiles (case-by-case)",
+      ...common,
+    ];
+  }
+  if (visaDirection === "Already resident") {
+    return [
+      "Residency transfer / status check (depends on your current visa type)",
+      "Housing + community shortlist becomes priority",
+      ...common,
+    ];
+  }
+  return [
+    "We’ll recommend the best pathway based on your profile (high-level first)",
+    "We’ll validate requirements and documents during your call",
+    ...common,
+  ];
+}
+
 const RELOCATION_STEPS: Step[] = [
   {
     id: "origin",
     title: "Origin & timeline",
-    question: "Where are you relocating from, and when?",
+    question: "Where are you relocating from, and what’s your timeline?",
     render: (s, setS) => (
       <div className="grid gap-4 md:grid-cols-2">
-        <FieldShell label="Origin country" required>
-          <TextInput
+        <FieldShell label="Origin country" required hint="Pick from the list">
+          <SelectInput
             value={s.originCountry}
             onChange={(v) => setS({ originCountry: v })}
-            placeholder="e.g., United Kingdom"
+            options={COUNTRIES}
           />
         </FieldShell>
+
         <FieldShell label="Timeline" required>
           <SelectInput
             value={s.timeline}
@@ -462,7 +856,11 @@ const RELOCATION_STEPS: Step[] = [
         </FieldShell>
 
         <div className="md:col-span-2">
-          <FieldShell label="Visa direction" hint="High-level only" required>
+          <FieldShell
+            label="Visa direction"
+            hint="High-level guidance. We confirm on a call."
+            required
+          >
             <Segmented
               value={s.visaDirection}
               onChange={(v) => setS({ visaDirection: v })}
@@ -478,7 +876,7 @@ const RELOCATION_STEPS: Step[] = [
       </div>
     ),
     validate: (s) => {
-      if (!s.originCountry?.trim()) return "Please add your origin country.";
+      if (!s.originCountry) return "Please select your origin country.";
       if (!s.timeline) return "Please select your timeline.";
       if (!s.visaDirection) return "Please choose a visa direction.";
       return null;
@@ -487,7 +885,7 @@ const RELOCATION_STEPS: Step[] = [
   {
     id: "household",
     title: "Household",
-    question: "What does your household look like?",
+    question: "Tell us your household setup — so we tailor areas and the plan.",
     render: (s, setS) => (
       <div className="grid gap-4 md:grid-cols-2">
         <FieldShell label="Household" required>
@@ -497,6 +895,7 @@ const RELOCATION_STEPS: Step[] = [
             options={["Single", "Couple", "Family"]}
           />
         </FieldShell>
+
         <FieldShell label="Children" required>
           <Segmented
             value={s.kids}
@@ -504,6 +903,7 @@ const RELOCATION_STEPS: Step[] = [
             options={["No", "Yes"]}
           />
         </FieldShell>
+
         <div className="md:col-span-2">
           <FieldShell label="Lifestyle preference" required>
             <Segmented
@@ -525,7 +925,7 @@ const RELOCATION_STEPS: Step[] = [
   {
     id: "area",
     title: "Area direction",
-    question: "Do you already know your preferred area?",
+    question: "Do you already have a preferred Dubai area?",
     render: (s, setS) => (
       <div className="grid gap-4 md:grid-cols-2">
         <FieldShell label="Preferred area known?" required>
@@ -542,16 +942,16 @@ const RELOCATION_STEPS: Step[] = [
               value={s.area}
               onChange={(v) => setS({ area: v })}
               options={[
-                "Downtown",
+                "Downtown Dubai",
                 "Dubai Marina",
                 "Business Bay",
                 "Palm Jumeirah",
                 "JBR",
                 "JLT",
-                "Dubai Hills",
+                "Dubai Hills Estate",
                 "Arabian Ranches",
                 "JVC",
-                "Creek Harbour",
+                "Dubai Creek Harbour",
                 "City Walk",
                 "Al Barsha",
               ]}
@@ -568,8 +968,8 @@ const RELOCATION_STEPS: Step[] = [
         )}
 
         <div className="md:col-span-2 rounded-2xl border border-black/10 bg-black/[0.03] p-4 text-sm text-black/70">
-          If you’re unsure, we’ll recommend 2–4 communities that match your
-          lifestyle + budget.
+          If you’re not sure on area, we’ll recommend 2–4 communities that match
+          your lifestyle + budget.
         </div>
       </div>
     ),
@@ -582,116 +982,83 @@ const RELOCATION_STEPS: Step[] = [
     },
   },
   {
-    id: "cost",
-    title: "Cost preview",
-    question: "Optional: quick cost-of-living preview (screening only).",
-    render: (s, setS) => (
-      <div className="grid gap-4 md:grid-cols-2">
-        <FieldShell label="Monthly take-home (current)" hint="Your currency">
-          <TextInput
-            value={s.currentSalary}
-            onChange={(v) => setS({ currentSalary: v })}
-            placeholder="e.g., 6500"
-          />
-        </FieldShell>
-        <FieldShell
-          label="Monthly fixed costs (current)"
-          hint="Rent + bills + transport"
-        >
-          <TextInput
-            value={s.currentFixed}
-            onChange={(v) => setS({ currentFixed: v })}
-            placeholder="e.g., 3200"
-          />
-        </FieldShell>
-        <FieldShell
-          label="Monthly discretionary (current)"
-          hint="Food + lifestyle"
-        >
-          <TextInput
-            value={s.currentDiscretionary}
-            onChange={(v) => setS({ currentDiscretionary: v })}
-            placeholder="e.g., 900"
-          />
-        </FieldShell>
-        <FieldShell label="Priority">
-          <Segmented
-            value={s.priority}
-            onChange={(v) => setS({ priority: v })}
-            options={["Comfort", "Balance", "Save more"]}
-          />
-        </FieldShell>
-
-        <div className="md:col-span-2 rounded-2xl border border-black/10 bg-black/[0.03] p-4">
-          <div className="text-[11px] tracking-[0.22em] text-black/55">
-            PREVIEW
-          </div>
-          <div className="mt-2 grid gap-3 md:grid-cols-3">
-            <div className="rounded-2xl bg-white p-4 shadow-sm">
-              <div className="text-[11px] text-black/50">
-                Current net after costs
-              </div>
-              <div className="mt-1 text-xl font-semibold text-black">
-                {computeCurrentNet(s)}
-              </div>
-            </div>
-            <div className="rounded-2xl bg-white p-4 shadow-sm">
-              <div className="text-[11px] text-black/50">
-                Dubai monthly estimate
-              </div>
-              <div className="mt-1 text-xl font-semibold text-black">
-                {computeDubaiEstimate(s)}
-              </div>
-            </div>
-            <div className="rounded-2xl bg-white p-4 shadow-sm">
-              <div className="text-[11px] text-black/50">Suggested runway</div>
-              <div className="mt-1 text-xl font-semibold text-black">
-                {computeRunwayWeeks(s)}
-              </div>
-            </div>
-          </div>
-          <div className="mt-3 text-[11px] text-black/45">
-            * Indicative only (screening). We validate on the call.
-          </div>
-        </div>
-      </div>
-    ),
-    validate: () => null,
-  },
-  {
     id: "finish",
     title: "Finish",
-    question: "We generate your relocation plan summary.",
+    question:
+      "We’ll generate a clear relocation plan summary — tailored to you.",
     render: (s, setS) => (
       <div className="space-y-4">
         <div className="rounded-2xl border border-black/10 bg-black/[0.03] p-4">
           <div className="text-[11px] tracking-[0.22em] text-black/55">
-            WHAT YOU GET
+            YOUR PLAN
           </div>
-          <ul className="mt-3 space-y-2 text-sm text-black/75">
-            {[
-              "Area shortlist aligned to your lifestyle",
-              "High-level visa pathway timeline guidance",
-              "Relocation plan from discovery → keys-in-hand",
-            ].map((t) => (
-              <li key={t} className="flex items-center gap-2">
-                <span
-                  className="inline-flex h-6 w-6 items-center justify-center rounded-full text-black"
-                  style={{ backgroundColor: GOLD }}
-                >
-                  <Icon name="check" className="h-4 w-4" />
-                </span>
-                {t}
-              </li>
-            ))}
-          </ul>
+          <div className="mt-2 text-sm text-black/70">
+            You’re relocating from{" "}
+            <span className="font-semibold text-black">
+              {s.originCountry || "—"}
+            </span>
+            . Based on what you selected, your suggested runway is:
+          </div>
+
+          <div className="mt-3 rounded-2xl bg-white p-4 shadow-sm">
+            <div className="text-[11px] text-black/50">Suggested runway</div>
+            <div className="mt-1 text-2xl font-semibold text-black">
+              ~{computeRunwayWeeksRelocation(s)} weeks
+            </div>
+            <div className="mt-1 text-[11px] text-black/45">
+              This is a planning estimate — we tighten it once we speak.
+            </div>
+          </div>
+
+          <div className="mt-4 rounded-2xl bg-white p-4 shadow-sm">
+            <div className="text-[11px] tracking-[0.22em] text-black/55">
+              VISA PATHWAYS (HIGH-LEVEL)
+            </div>
+            <ul className="mt-2 space-y-2 text-sm text-black/75">
+              {visaGuidance(s.visaDirection || "Need guidance").map(
+                (x: string) => (
+                  <li key={x} className="flex items-start gap-2">
+                    <span className="mt-[2px] inline-flex h-5 w-5 items-center justify-center rounded-full bg-[#C8A45D] text-black">
+                      <Icon name="check" className="h-3.5 w-3.5" />
+                    </span>
+                    <span>{x}</span>
+                  </li>
+                )
+              )}
+            </ul>
+            <div className="mt-3 text-[11px] text-black/45">
+              Note: Rules vary by nationality and change over time. We confirm
+              details on a call.
+            </div>
+          </div>
+
+          <div className="mt-4 rounded-2xl bg-white p-4 shadow-sm">
+            <div className="text-[11px] tracking-[0.22em] text-black/55">
+              WHAT YOU NEED BEFORE YOU MOVE
+            </div>
+            <ul className="mt-2 space-y-2 text-sm text-black/75">
+              {[
+                "A clean document pack: passport, photos, basic proof of income",
+                "Area shortlist aligned to your lifestyle (and schools if needed)",
+                "Housing approach: lease vs buy-first (we’ll advise)",
+                "First 30-days checklist: SIM/banking/transport/building setup",
+              ].map((x) => (
+                <li key={x} className="flex items-start gap-2">
+                  <span className="mt-[2px] inline-flex h-5 w-5 items-center justify-center rounded-full bg-black text-white">
+                    <Icon name="check" className="h-3.5 w-3.5" />
+                  </span>
+                  <span>{x}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
         </div>
 
         <FieldShell label="Anything else we should know?" hint="Optional">
           <textarea
             value={s.notes}
             onChange={(e) => setS({ notes: e.target.value })}
-            placeholder="e.g., school options, quiet building, near metro…"
+            placeholder="e.g., schools, near metro, quiet building, short-term rental first, etc."
             className="h-28 w-full resize-none bg-transparent text-sm text-black outline-none placeholder:text-black/30"
           />
         </FieldShell>
@@ -705,7 +1072,7 @@ const VIEWING_STEPS: Step[] = [
   {
     id: "budget",
     title: "Budget & horizon",
-    question: "What’s your budget and buying horizon?",
+    question: "What’s your budget range and buying horizon?",
     render: (s, setS) => (
       <div className="grid gap-4 md:grid-cols-2">
         <FieldShell label="Budget range (AED)" required>
@@ -715,6 +1082,7 @@ const VIEWING_STEPS: Step[] = [
             options={["750k – 1.5M", "1.5M – 3M", "3M – 6M", "6M+"]}
           />
         </FieldShell>
+
         <FieldShell label="Buying horizon" required>
           <SelectInput
             value={s.horizon}
@@ -722,6 +1090,7 @@ const VIEWING_STEPS: Step[] = [
             options={["Now", "1–3 months", "3–6 months", "6+ months"]}
           />
         </FieldShell>
+
         <div className="md:col-span-2">
           <FieldShell label="Goal" required>
             <Segmented
@@ -758,6 +1127,7 @@ const VIEWING_STEPS: Step[] = [
             ]}
           />
         </FieldShell>
+
         <FieldShell
           label="Viewing intensity"
           required
@@ -769,9 +1139,10 @@ const VIEWING_STEPS: Step[] = [
             options={["Light", "Balanced", "Intensive"]}
           />
         </FieldShell>
+
         <div className="md:col-span-2 rounded-2xl border border-black/10 bg-black/[0.03] p-4 text-sm text-black/70">
-          We organise a curated itinerary: shortlist → area brief → viewings →
-          next steps.
+          We’ll organise a curated itinerary: optional pickup, area brief, and
+          viewings that fit your pace.
         </div>
       </div>
     ),
@@ -794,6 +1165,7 @@ const VIEWING_STEPS: Step[] = [
             options={["Apartment", "Townhouse", "Villa", "Mixed / not sure"]}
           />
         </FieldShell>
+
         <FieldShell label="Market type" required>
           <SelectInput
             value={s.marketType}
@@ -801,6 +1173,7 @@ const VIEWING_STEPS: Step[] = [
             options={["Off-plan", "Secondary", "Both"]}
           />
         </FieldShell>
+
         <div className="md:col-span-2">
           <FieldShell label="Bedrooms (preference)" required>
             <Segmented
@@ -852,8 +1225,7 @@ const VIEWING_STEPS: Step[] = [
         )}
 
         <div className="md:col-span-2 rounded-2xl border border-black/10 bg-black/[0.03] p-4 text-sm text-black/70">
-          We shortlist 6–10 options, then schedule viewings around your
-          itinerary.
+          We’ll shortlist options, then schedule viewings around your trip.
         </div>
       </div>
     ),
@@ -869,91 +1241,77 @@ const VIEWING_STEPS: Step[] = [
   {
     id: "finish",
     title: "Finish",
-    question: "We generate your viewing-trip plan summary.",
-    render: (s, setS) => (
-      <div className="space-y-4">
-        <div className="rounded-2xl border border-black/10 bg-black/[0.03] p-4">
-          <div className="text-[11px] tracking-[0.22em] text-black/55">
-            WHAT YOU GET
-          </div>
-          <ul className="mt-3 space-y-2 text-sm text-black/75">
-            {[
-              "Curated itinerary + scheduled viewings",
-              "Shortlist aligned to your budget + goal",
-              "Offer + paperwork guidance (high-level)",
-            ].map((t) => (
-              <li key={t} className="flex items-center gap-2">
-                <span
-                  className="inline-flex h-6 w-6 items-center justify-center rounded-full text-black"
-                  style={{ backgroundColor: GOLD }}
-                >
-                  <Icon name="check" className="h-4 w-4" />
-                </span>
-                {t}
-              </li>
-            ))}
-          </ul>
-        </div>
+    question: "Here’s your step-by-step plan (tick-box style).",
+    render: (s) => {
+      const horizon = s.horizon || "—";
+      const intensity = s.intensity || "Balanced";
+      const plan = [
+        "Intro call — confirm goals, budget and timeline",
+        "Agree shortlist criteria (areas, property type, yield vs end-use)",
+        "Build shortlist (6–10 options) aligned to your preferences",
+        "Lock viewing schedule (pace matched to your intensity)",
+        "Arrange trip logistics (optional pickup / route plan)",
+        "Conduct viewings + area brief on the ground",
+        "Shortlist final 1–3 options and compare payment plans",
+        "Offer strategy + negotiation guidance (high-level)",
+        "Paperwork checklist + timelines (high-level)",
+        `Target next step: ${horizon} horizon — we keep momentum`,
+      ];
 
-        <FieldShell label="Anything else we should tailor?" hint="Optional">
-          <textarea
-            value={s.notes}
-            onChange={(e) => setS({ notes: e.target.value })}
-            placeholder="e.g., prefer payment plan, near metro, ready tenants…"
-            className="h-28 w-full resize-none bg-transparent text-sm text-black outline-none placeholder:text-black/30"
-          />
-        </FieldShell>
-      </div>
-    ),
+      return (
+        <div className="space-y-4">
+          <div className="rounded-2xl border border-black/10 bg-black/[0.03] p-4">
+            <div className="text-[11px] tracking-[0.22em] text-black/55">
+              YOUR VIEWING TRIP PLAN
+            </div>
+            <div className="mt-2 text-sm text-black/70">
+              You selected{" "}
+              <span className="font-semibold text-black">{intensity}</span>{" "}
+              intensity. Here’s the process we run with you:
+            </div>
+
+            <div className="mt-4 space-y-2">
+              {plan.map((x) => (
+                <div
+                  key={x}
+                  className="flex items-start gap-3 rounded-2xl border border-black/10 bg-white px-4 py-3 shadow-sm"
+                >
+                  <div className="mt-[2px] h-5 w-5 rounded-md border border-black/20 bg-white" />
+                  <div className="text-sm text-black/75">{x}</div>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-3 text-[11px] text-black/45">
+              Designed for lead-gen: quick, clear, not overwhelming.
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-black/10 bg-white p-4 shadow-sm">
+            <div className="text-[11px] tracking-[0.22em] text-black/55">
+              WHAT WE NEED FROM YOU
+            </div>
+            <div className="mt-2 text-sm text-black/70">
+              Just confirm your availability + preferred contact channel, and
+              we’ll take it from there.
+            </div>
+          </div>
+        </div>
+      );
+    },
     validate: () => null,
   },
 ];
 
-function computeCurrentNet(s: any) {
-  const salary = Number(String(s.currentSalary || "").replace(/[^0-9.]/g, ""));
-  const fixed = Number(String(s.currentFixed || "").replace(/[^0-9.]/g, ""));
-  const disc = Number(
-    String(s.currentDiscretionary || "").replace(/[^0-9.]/g, "")
-  );
-  if (!salary) return "—";
-  const net = salary - fixed - disc;
-  if (!isFinite(net)) return "—";
-  return `${net.toFixed(0)}`;
-}
-
-function computeDubaiEstimate(s: any) {
-  const household = s.household || "Single";
-  const kids = s.kids || "No";
-  const band = s.budgetBand || "";
-  const priority = s.priority || "Balance";
-
-  let base = 12000;
-  if (household === "Couple") base += 4000;
-  if (household === "Family") base += 9000;
-  if (kids === "Yes") base += 4500;
-
-  if (band.includes("< 8k")) base -= 2500;
-  if (band.includes("15–25k")) base += 4500;
-  if (band.includes("25k+")) base += 9000;
-
-  if (priority === "Save more") base -= 1500;
-  if (priority === "Comfort") base += 1500;
-
-  return `${clamp(Math.round(base), 8000, 40000)} AED / mo`;
-}
-
-function computeRunwayWeeks(s: any) {
-  const household = s.household || "Single";
-  const kids = s.kids || "No";
-  let weeks = 6;
-  if (household === "Couple") weeks += 1;
-  if (household === "Family") weeks += 2;
-  if (kids === "Yes") weeks += 3;
-  if (s.areaKnown === "Not sure") weeks += 2;
-  return `~${weeks} weeks`;
-}
+type EmailCapture = {
+  name: string;
+  email: string;
+  email2: string;
+  phone: string;
+};
 
 function buildRelocationSummary(state: any) {
+  const runway = computeRunwayWeeksRelocation(state);
   const lines: string[] = [];
   lines.push("CONCIERGE — RELOCATION SUMMARY");
   lines.push("");
@@ -973,8 +1331,20 @@ function buildRelocationSummary(state: any) {
   if (state.areaKnown !== "Known")
     lines.push(`Budget band: ${state.budgetBand || "-"}`);
   lines.push("");
-  lines.push(`Estimated runway: ${computeRunwayWeeks(state)}`);
-  lines.push(`Dubai monthly estimate: ${computeDubaiEstimate(state)}`);
+  lines.push(`Suggested runway: ~${runway} weeks`);
+  lines.push("");
+  lines.push("Visa pathways (high-level):");
+  visaGuidance(state.visaDirection || "Need guidance").forEach((v: string) =>
+    lines.push(`- ${v}`)
+  );
+  lines.push("");
+  lines.push("Key move checklist:");
+  [
+    "Document pack: passport, photos, proof of income",
+    "Area shortlist + school direction (if needed)",
+    "Housing approach: lease vs buy-first",
+    "First 30-days checklist: SIM, banking, transport, building setup",
+  ].forEach((x) => lines.push(`- ${x}`));
   lines.push("");
   if (state.notes?.trim()) {
     lines.push("Notes:");
@@ -992,7 +1362,7 @@ function buildViewingSummary(state: any) {
   lines.push(`Goal: ${state.goal || "-"}`);
   lines.push("");
   lines.push(`Travel window: ${state.travelWindow || "-"}`);
-  lines.push(`Schedule intensity: ${state.intensity || "-"}`);
+  lines.push(`Intensity: ${state.intensity || "-"}`);
   lines.push("");
   lines.push(`Property type: ${state.propertyType || "-"}`);
   lines.push(`Market type: ${state.marketType || "-"}`);
@@ -1006,19 +1376,14 @@ function buildViewingSummary(state: any) {
     }`
   );
   lines.push("");
+  lines.push("Step-by-step plan included on screen (tick-box style).");
+  lines.push("");
   if (state.notes?.trim()) {
     lines.push("Notes:");
     lines.push(state.notes.trim());
   }
   return lines.join("\n");
 }
-
-type EmailCapture = {
-  name: string;
-  email: string;
-  email2: string;
-  phone: string;
-};
 
 function Wizard({
   open,
@@ -1033,6 +1398,7 @@ function Wizard({
 
   const [stepIdx, setStepIdx] = useState(0);
   const [state, setState] = useState<any>(() => ({}));
+
   const [emailOpen, setEmailOpen] = useState(false);
   const [bookOpen, setBookOpen] = useState(false);
 
@@ -1043,7 +1409,6 @@ function Wizard({
     phone: "",
   });
 
-  const [callWhen, setCallWhen] = useState<CallWhen>("ASAP");
   const [callDate, setCallDate] = useState("");
   const [callTime, setCallTime] = useState("");
 
@@ -1053,7 +1418,6 @@ function Wizard({
     setEmailOpen(false);
     setBookOpen(false);
     setCapture({ name: "", email: "", email2: "", phone: "" });
-    setCallWhen("ASAP");
     setCallDate("");
     setCallTime("");
   };
@@ -1065,6 +1429,7 @@ function Wizard({
 
   const current = steps[stepIdx];
   const setPatch = (patch: any) => setState((p: any) => ({ ...p, ...patch }));
+
   const err = useMemo(() => current?.validate(state) ?? null, [current, state]);
   const canNext = !err;
 
@@ -1094,7 +1459,6 @@ function Wizard({
       `Client name: ${capture.name}`,
       `Client email: ${capture.email}`,
       `Client phone: ${capture.phone}`,
-      `Preferred contact window: ${callWhen}`,
       "",
       summaryText,
     ].join("\n");
@@ -1132,8 +1496,23 @@ function Wizard({
     flow === "relocation" ? "Relocation Concierge" : "Curated Viewing Trip";
   const subtitle =
     flow === "relocation"
-      ? "A guided relocation plan — shortlist, timeline, onboarding support."
-      : "We organise your Dubai visit — shortlist + viewings + a clear process.";
+      ? "A guided relocation plan — area shortlist + onboarding support."
+      : "We organise your Dubai visit — shortlist + viewings + a clear process to buy with confidence.";
+
+  // tiny smooth transition (not “scribbly”)
+  const key = `${flow}-${stepIdx}`;
+  const contentRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    const el = contentRef.current;
+    if (!el) return;
+    el.classList.remove("opacity-100", "translate-y-0");
+    el.classList.add("opacity-0", "translate-y-2");
+    const t = window.setTimeout(() => {
+      el.classList.remove("opacity-0", "translate-y-2");
+      el.classList.add("opacity-100", "translate-y-0");
+    }, 10);
+    return () => window.clearTimeout(t);
+  }, [key]);
 
   return (
     <>
@@ -1159,7 +1538,13 @@ function Wizard({
                 {current.question}
               </div>
 
-              <div className="mt-5">{current.render(state, setPatch)}</div>
+              <div
+                ref={contentRef}
+                className="mt-5 transition-all duration-300 opacity-100 translate-y-0"
+                key={key}
+              >
+                {current.render(state, setPatch)}
+              </div>
 
               {err ? (
                 <div className="mt-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
@@ -1171,7 +1556,7 @@ function Wizard({
                 <button
                   type="button"
                   onClick={() => setStepIdx((i) => Math.max(0, i - 1))}
-                  className="rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm font-semibold text-black/70 hover:bg-black/5 disabled:opacity-40"
+                  className="rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm font-semibold text-black/70 hover:bg-black/5"
                   disabled={stepIdx === 0}
                 >
                   Back
@@ -1187,10 +1572,9 @@ function Wizard({
                     className={[
                       "inline-flex items-center justify-center gap-2 rounded-2xl px-5 py-3 text-sm font-semibold transition",
                       canNext
-                        ? "text-black hover:brightness-110"
+                        ? "bg-[#C8A45D] text-black hover:brightness-110"
                         : "bg-black/10 text-black/35 cursor-not-allowed",
                     ].join(" ")}
-                    style={canNext ? { backgroundColor: GOLD } : undefined}
                     disabled={!canNext}
                   >
                     Next <Icon name="arrow" />
@@ -1200,8 +1584,7 @@ function Wizard({
                     <button
                       type="button"
                       onClick={() => setEmailOpen(true)}
-                      className="inline-flex items-center justify-center gap-2 rounded-2xl px-5 py-3 text-sm font-semibold text-black hover:brightness-110"
-                      style={{ backgroundColor: GOLD }}
+                      className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#C8A45D] px-5 py-3 text-sm font-semibold text-black hover:brightness-110"
                     >
                       Email this summary <Icon name="mail" />
                     </button>
@@ -1234,20 +1617,19 @@ function Wizard({
                 WHY THIS WORKS
               </div>
               <div className="mt-2 text-sm text-black/70">
-                You get a clear plan instantly. We get the context to tailor the
-                next step — without wasting time.
+                You get a clear plan instantly. We get the context we need to
+                tailor the next step — without wasting time.
               </div>
             </div>
           </div>
         </div>
       </Modal>
 
-      {/* Email capture */}
       <Modal
         open={emailOpen}
         onClose={() => setEmailOpen(false)}
         title="Send your summary"
-        subtitle="We’ll receive your details + summary via email."
+        subtitle="We’ll receive your details + the summary via email (lead-gen)."
         widthClass="max-w-2xl"
       >
         <div className="grid gap-4 md:grid-cols-2">
@@ -1287,16 +1669,6 @@ function Wizard({
             />
           </FieldShell>
 
-          <div className="md:col-span-2">
-            <FieldShell label="Preferred contact window" required>
-              <Segmented
-                value={callWhen}
-                onChange={setCallWhen}
-                options={["ASAP", "1 month", "2 months", "6 months"]}
-              />
-            </FieldShell>
-          </div>
-
           <div className="md:col-span-2 flex items-center justify-end gap-3">
             <button
               type="button"
@@ -1312,10 +1684,9 @@ function Wizard({
               className={[
                 "inline-flex items-center justify-center gap-2 rounded-2xl px-5 py-3 text-sm font-semibold transition",
                 canEmail
-                  ? "text-black hover:brightness-110"
+                  ? "bg-[#C8A45D] text-black hover:brightness-110"
                   : "bg-black/10 text-black/35 cursor-not-allowed",
               ].join(" ")}
-              style={canEmail ? { backgroundColor: GOLD } : undefined}
             >
               Open email <Icon name="arrow" />
             </button>
@@ -1323,7 +1694,6 @@ function Wizard({
         </div>
       </Modal>
 
-      {/* Booking */}
       <Modal
         open={bookOpen}
         onClose={() => setBookOpen(false)}
@@ -1369,11 +1739,21 @@ function Wizard({
           </FieldShell>
 
           <FieldShell label="Preferred date (Dubai time)" required>
-            <TextInput value={callDate} onChange={setCallDate} type="date" />
+            <input
+              value={callDate}
+              onChange={(e) => setCallDate(e.target.value)}
+              type="date"
+              className="w-full bg-transparent text-sm text-black outline-none"
+            />
           </FieldShell>
 
           <FieldShell label="Preferred time (Dubai time)" required>
-            <TextInput value={callTime} onChange={setCallTime} type="time" />
+            <input
+              value={callTime}
+              onChange={(e) => setCallTime(e.target.value)}
+              type="time"
+              className="w-full bg-transparent text-sm text-black outline-none"
+            />
           </FieldShell>
 
           <div className="md:col-span-2 flex items-center justify-end gap-3">
@@ -1391,10 +1771,9 @@ function Wizard({
               className={[
                 "inline-flex items-center justify-center gap-2 rounded-2xl px-5 py-3 text-sm font-semibold transition",
                 canBook
-                  ? "text-black hover:brightness-110"
+                  ? "bg-[#C8A45D] text-black hover:brightness-110"
                   : "bg-black/10 text-black/35 cursor-not-allowed",
               ].join(" ")}
-              style={canBook ? { backgroundColor: GOLD } : undefined}
             >
               Open booking email <Icon name="arrow" />
             </button>
@@ -1405,109 +1784,26 @@ function Wizard({
   );
 }
 
-function TopNav({ hidden }: { hidden: boolean }) {
-  return (
-    <div
-      className={[
-        "fixed left-0 right-0 top-0 z-50 transition-all duration-300",
-        hidden
-          ? "-translate-y-28 opacity-0 pointer-events-none"
-          : "translate-y-0 opacity-100",
-      ].join(" ")}
-    >
-      <div className="mx-auto max-w-6xl px-4 pt-4">
-        <div className="flex items-center justify-between rounded-3xl border border-white/10 bg-black/70 px-5 py-4 text-white shadow-2xl backdrop-blur-xl">
-          <Link href="/" className="text-xl font-semibold tracking-tight">
-            keystne
-          </Link>
-
-          <div className="hidden items-center gap-6 text-sm font-semibold md:flex">
-            {[
-              { label: "Concierge", href: "/concierge" },
-              { label: "Discover Communities", href: "/communities" },
-              { label: "Investments", href: "/investments" },
-              { label: "Long-Term", href: "/long-term" },
-              { label: "Property Management", href: "/management" },
-              { label: "About", href: "/about" },
-            ].map((i) => (
-              <Link
-                key={i.label}
-                href={i.href}
-                className="transition"
-                onMouseEnter={(e) => (e.currentTarget.style.color = GOLD)}
-                onMouseLeave={(e) =>
-                  (e.currentTarget.style.color = "rgba(255,255,255,0.85)")
-                }
-                style={{ color: "rgba(255,255,255,0.85)" }}
-              >
-                {i.label}
-              </Link>
-            ))}
-          </div>
-
-          <div className="text-[11px] tracking-[0.22em] text-white/70">
-            DUBAI
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function PageFooter() {
-  return (
-    <footer className="bg-black text-white">
-      <div className="mx-auto max-w-6xl px-4 py-10">
-        <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
-          <div>
-            <div className="text-lg font-semibold tracking-tight">keystne</div>
-            <div className="mt-2 max-w-md text-sm text-white/70">
-              Premium real estate services in Dubai — concierge relocation,
-              brokerage & investments, long-term rentals, and property
-              management.
-            </div>
-          </div>
-
-          <div className="grid gap-2 text-sm text-white/75">
-            <div className="flex flex-wrap gap-4">
-              {[
-                "Concierge",
-                "Discover Communities",
-                "Investments",
-                "Long-Term",
-                "Property Management",
-                "About",
-              ].map((t) => (
-                <span key={t} className="text-white/65">
-                  {t}
-                </span>
-              ))}
-            </div>
-            <div className="text-[11px] text-white/45">
-              © {new Date().getFullYear()} Keystne. All rights reserved.
-            </div>
-          </div>
-        </div>
-      </div>
-    </footer>
-  );
-}
+/* ---------- Page ---------- */
 
 export default function ConciergePage() {
+  // NAV hide-on-scroll-down (page-only)
   const [navHidden, setNavHidden] = useState(false);
   const lastY = useRef(0);
 
+  // Wizard open state
   const [flow, setFlow] = useState<ConciergeFlow>(null);
   const wizardOpen = flow !== null;
+
+  // Compare modal
+  const [compareOpen, setCompareOpen] = useState(false);
 
   useEffect(() => {
     const onScroll = () => {
       const y = window.scrollY || 0;
       const delta = y - lastY.current;
-
       if (delta > 10) setNavHidden(true);
       if (delta < -10) setNavHidden(false);
-
       lastY.current = y;
     };
 
@@ -1518,9 +1814,19 @@ export default function ConciergePage() {
 
   return (
     <div className="min-h-screen bg-white text-black">
-      <TopNav hidden={navHidden} />
+      {/* Wrapper to hide/show nav on scroll direction */}
+      <div
+        className={[
+          "fixed left-0 right-0 top-0 z-50 transition-all duration-300",
+          navHidden
+            ? "-translate-y-28 opacity-0 pointer-events-none"
+            : "translate-y-0 opacity-100",
+        ].join(" ")}
+      >
+        <KeystneNav />
+      </div>
 
-      {/* HERO */}
+      {/* HERO (video stays) */}
       <section className="relative min-h-[70vh] overflow-hidden">
         <video
           className="absolute inset-0 h-full w-full object-cover opacity-85"
@@ -1534,8 +1840,9 @@ export default function ConciergePage() {
 
         <div className="relative mx-auto max-w-6xl px-4 pb-12 pt-28">
           <div className="max-w-3xl">
+            {/* Removed DUBAI */}
             <div className="text-[11px] tracking-[0.22em] text-white/80">
-              CONCIERGE • DUBAI
+              CONCIERGE
             </div>
 
             <h1 className="mt-3 text-4xl font-semibold tracking-tight text-white md:text-6xl">
@@ -1548,10 +1855,10 @@ export default function ConciergePage() {
             </p>
 
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+              {/* Buttons: Relocation / Viewing / Compare (no Back Home) */}
               <button
                 onClick={() => setFlow("relocation")}
-                className="inline-flex items-center justify-center gap-2 rounded-2xl px-6 py-4 text-sm font-semibold text-black hover:brightness-110"
-                style={{ backgroundColor: GOLD }}
+                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#C8A45D] px-6 py-4 text-sm font-semibold text-black hover:brightness-110"
               >
                 Relocation concierge <Icon name="arrow" />
               </button>
@@ -1563,20 +1870,29 @@ export default function ConciergePage() {
                 Curated viewing trip <Icon name="arrow" />
               </button>
 
-              <Link
-                href="/"
-                className="inline-flex items-center justify-center rounded-2xl border border-white/30 bg-white/10 px-6 py-4 text-sm font-semibold text-white hover:bg-white/15"
+              <button
+                onClick={() => setCompareOpen(true)}
+                className="inline-flex items-center justify-center gap-2 rounded-2xl border border-white/30 bg-white/10 px-6 py-4 text-sm font-semibold text-white hover:bg-white/15"
               >
-                Back to home
-              </Link>
+                Compare <Icon name="arrow" />
+              </button>
             </div>
           </div>
         </div>
       </section>
 
-      {/* BODY */}
+      {/* Dubai time pill — stable position (same vibe) */}
       <section className="bg-white">
-        <div className="mx-auto max-w-6xl px-4 py-14">
+        <div className="mx-auto max-w-6xl px-4">
+          <div className="-mt-6 flex justify-center">
+            <DubaiTimePill />
+          </div>
+        </div>
+      </section>
+
+      {/* BODY — light premium */}
+      <section className="bg-white">
+        <div className="mx-auto max-w-6xl px-4 py-12">
           <div className="text-[11px] tracking-[0.22em] text-black/55">
             CHOOSE A PATH
           </div>
@@ -1584,14 +1900,15 @@ export default function ConciergePage() {
             Pick what you need — we’ll do the rest.
           </h2>
           <p className="mt-3 max-w-3xl text-sm text-black/65">
-            Quick questions, premium experience. You get a clean summary you can
-            email to yourself and use to book a call.
+            We keep the questions simple (lead-gen), then generate a clear
+            summary you can email to yourself and use to book a call.
           </p>
 
-          <div className="mt-10 grid gap-4 md:grid-cols-2">
+          {/* Reduced spacing here */}
+          <div className="mt-6 grid gap-4 md:grid-cols-2">
             <button
               onClick={() => setFlow("relocation")}
-              className="group relative overflow-hidden rounded-[28px] border border-black/10 bg-white text-left shadow-2xl transition hover:-translate-y-1"
+              className="group relative overflow-hidden rounded-[28px] border border-black/10 bg-white text-left shadow-ks transition hover:-translate-y-1"
             >
               <div className="absolute inset-0 bg-gradient-to-br from-black/[0.02] via-transparent to-[#C8A45D]/10" />
               <div className="relative p-7">
@@ -1602,20 +1919,11 @@ export default function ConciergePage() {
                   Relocation concierge
                 </div>
                 <div className="mt-3 text-sm text-black/70">
-                  Visa direction, area shortlist, and a smooth move-in flow —
-                  handled personally.
+                  A guided plan: visa direction, area shortlist, and a smooth
+                  move-in flow — handled personally.
                 </div>
 
-                <div
-                  className="mt-6 inline-flex items-center gap-2 rounded-full bg-black px-4 py-2 text-[12px] font-semibold text-white group-hover:text-black"
-                  style={{}}
-                  onMouseEnter={(e) =>
-                    (e.currentTarget.style.backgroundColor = GOLD)
-                  }
-                  onMouseLeave={(e) =>
-                    (e.currentTarget.style.backgroundColor = "black")
-                  }
-                >
+                <div className="mt-6 inline-flex items-center gap-2 rounded-full bg-black px-4 py-2 text-[12px] font-semibold text-white group-hover:bg-[#C8A45D] group-hover:text-black">
                   Start <Icon name="arrow" className="h-4 w-4" />
                 </div>
               </div>
@@ -1623,7 +1931,7 @@ export default function ConciergePage() {
 
             <button
               onClick={() => setFlow("viewing")}
-              className="group relative overflow-hidden rounded-[28px] border border-black/10 bg-white text-left shadow-2xl transition hover:-translate-y-1"
+              className="group relative overflow-hidden rounded-[28px] border border-black/10 bg-white text-left shadow-ks transition hover:-translate-y-1"
             >
               <div className="absolute inset-0 bg-gradient-to-br from-black/[0.02] via-transparent to-[#C8A45D]/10" />
               <div className="relative p-7">
@@ -1638,40 +1946,35 @@ export default function ConciergePage() {
                   buy with confidence.
                 </div>
 
-                <div
-                  className="mt-6 inline-flex items-center gap-2 rounded-full bg-black px-4 py-2 text-[12px] font-semibold text-white group-hover:text-black"
-                  onMouseEnter={(e) =>
-                    (e.currentTarget.style.backgroundColor = GOLD)
-                  }
-                  onMouseLeave={(e) =>
-                    (e.currentTarget.style.backgroundColor = "black")
-                  }
-                >
+                <div className="mt-6 inline-flex items-center gap-2 rounded-full bg-black px-4 py-2 text-[12px] font-semibold text-white group-hover:bg-[#C8A45D] group-hover:text-black">
                   Start <Icon name="arrow" className="h-4 w-4" />
                 </div>
               </div>
             </button>
           </div>
 
-          <div className="mt-12 rounded-[28px] border border-black/10 bg-black p-7 text-white">
-            <div className="text-[11px] tracking-[0.22em] text-white/55">
+          {/* PROMISE — now white + black text, pulled up slightly */}
+          <div className="mt-8 rounded-[28px] border border-black/10 bg-white p-7 text-black shadow-sm">
+            <div className="text-[11px] tracking-[0.22em] text-black/55">
               PROMISE
             </div>
             <div className="mt-2 text-2xl font-semibold">
               We keep it premium. We keep it personal.
             </div>
-            <div className="mt-3 max-w-3xl text-sm text-white/80">
-              Designed to feel easy — not boring form-filling. Answer a few
-              prompts, get a clean plan.
+            <div className="mt-3 max-w-3xl text-sm text-black/70">
+              This is designed to be quick, not “boring form-filling”. You
+              answer a few guided prompts, then you get a clean summary + an
+              easy next step.
             </div>
           </div>
         </div>
       </section>
 
-      <PageFooter />
+      <KeystneFooter />
       <ContactDock />
 
       <Wizard open={wizardOpen} flow={flow} onClose={() => setFlow(null)} />
+      <CompareModal open={compareOpen} onClose={() => setCompareOpen(false)} />
     </div>
   );
 }
