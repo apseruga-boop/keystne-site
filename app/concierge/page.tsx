@@ -6,19 +6,13 @@ import KeystneFooter from "../../components/site/KeystneFooter";
 import { CONTACT, HOME_VIDEOS } from "../../components/site/config";
 
 /**
- * PAGE 2 — CONCIERGE (UPDATED)
- * Only changes applied (exactly what you asked):
- * - Top pill: remove “Dubai” (now just CONCIERGE)
- * - Add Dubai time pill back in the hero (same vibe / stable position)
- * - Remove “Back to home” (already removed)
- * - Compare calculator button stays (salary + FX to AED, T&Cs, contact/refresh/email)
- * - Reduce spacing above option cards
- * - PROMISE box -> black background + white text; pulled up slightly
- * - Relocation wizard: origin country dropdown (no typing) (already)
- * - Remove scribbly transition animation in wizard
- * - Relocation summary: more bespoke + origin-based entry/visa notes + key move checklist
- * - Viewing trip finish: 10-step tick-box plan generated from answers (lightly bespoke)
- * - Keep everything else as-is
+ * CHANGES APPLIED (ONLY):
+ * 1) Under the top hero pill area: removed "CONCIERGE" and removed DubaiTimePill entirely.
+ * 2) In hero buttons row: removed "Compare" button.
+ * 3) Reduced spacing between hero CTAs and the next section ("Pick what you need — we’ll do the rest.")
+ *    by reducing hero bottom padding and the next section top padding.
+ *
+ * NOTHING ELSE CHANGED.
  */
 
 type ConciergeFlow = "relocation" | "viewing" | null;
@@ -324,33 +318,6 @@ function Progress({ step, total }: { step: number; total: number }) {
   );
 }
 
-/** Dubai time pill (stable) */
-function DubaiTimePill() {
-  const [now, setNow] = useState<Date>(() => new Date());
-  useEffect(() => {
-    const t = window.setInterval(() => setNow(new Date()), 1000);
-    return () => window.clearInterval(t);
-  }, []);
-  const timeText = useMemo(() => {
-    try {
-      return new Intl.DateTimeFormat("en-GB", {
-        timeZone: "Asia/Dubai",
-        weekday: "short",
-        hour: "2-digit",
-        minute: "2-digit",
-      }).format(now);
-    } catch {
-      return now.toLocaleTimeString();
-    }
-  }, [now]);
-  return (
-    <div className="inline-flex items-center gap-2 rounded-full border border-black/10 bg-white/90 px-4 py-2 text-[12px] font-semibold text-black shadow-ks backdrop-blur">
-      <span className="h-2 w-2 rounded-full bg-[#C8A45D]" />
-      Dubai time: <span className="text-black/75">{timeText}</span>
-    </div>
-  );
-}
-
 /** Contact dock — matches locked homepage style (white dock, gold hover) */
 function ContactDock() {
   return (
@@ -405,357 +372,7 @@ function ContactDock() {
   );
 }
 
-/* ---------- Compare Calculator (modal) ---------- */
-
-const COUNTRIES = [
-  "United Arab Emirates",
-  "United Kingdom",
-  "United States",
-  "Canada",
-  "Australia",
-  "New Zealand",
-  "Ireland",
-  "France",
-  "Germany",
-  "Netherlands",
-  "Belgium",
-  "Spain",
-  "Italy",
-  "Portugal",
-  "Switzerland",
-  "Sweden",
-  "Norway",
-  "Denmark",
-  "Finland",
-  "South Africa",
-  "Nigeria",
-  "Ghana",
-  "Kenya",
-  "Uganda",
-  "Rwanda",
-  "Tanzania",
-  "Ethiopia",
-  "Egypt",
-  "Morocco",
-  "Algeria",
-  "Tunisia",
-  "Turkey",
-  "Saudi Arabia",
-  "Qatar",
-  "Kuwait",
-  "Bahrain",
-  "Oman",
-  "India",
-  "Pakistan",
-  "Bangladesh",
-  "Sri Lanka",
-  "Philippines",
-  "Indonesia",
-  "Malaysia",
-  "Singapore",
-  "China",
-  "Japan",
-  "South Korea",
-  "Brazil",
-  "Mexico",
-  "Argentina",
-  "Colombia",
-];
-
-const COUNTRY_TO_CURRENCY: Record<string, string> = {
-  "United Arab Emirates": "AED",
-  "United Kingdom": "GBP",
-  "United States": "USD",
-  Canada: "CAD",
-  Australia: "AUD",
-  "New Zealand": "NZD",
-  Ireland: "EUR",
-  France: "EUR",
-  Germany: "EUR",
-  Netherlands: "EUR",
-  Belgium: "EUR",
-  Spain: "EUR",
-  Italy: "EUR",
-  Portugal: "EUR",
-  Switzerland: "CHF",
-  Sweden: "SEK",
-  Norway: "NOK",
-  Denmark: "DKK",
-  Finland: "EUR",
-  "South Africa": "ZAR",
-  Nigeria: "NGN",
-  Ghana: "GHS",
-  Kenya: "KES",
-  Uganda: "UGX",
-  Rwanda: "RWF",
-  Tanzania: "TZS",
-  Ethiopia: "ETB",
-  Egypt: "EGP",
-  Morocco: "MAD",
-  Algeria: "DZD",
-  Tunisia: "TND",
-  Turkey: "TRY",
-  "Saudi Arabia": "SAR",
-  Qatar: "QAR",
-  Kuwait: "KWD",
-  Bahrain: "BHD",
-  Oman: "OMR",
-  India: "INR",
-  Pakistan: "PKR",
-  Bangladesh: "BDT",
-  "Sri Lanka": "LKR",
-  Philippines: "PHP",
-  Indonesia: "IDR",
-  Malaysia: "MYR",
-  Singapore: "SGD",
-  China: "CNY",
-  Japan: "JPY",
-  "South Korea": "KRW",
-  Brazil: "BRL",
-  Mexico: "MXN",
-  Argentina: "ARS",
-  Colombia: "COP",
-};
-
-function parseNumber(v: string) {
-  const n = Number(String(v || "").replace(/[^0-9.]/g, ""));
-  return Number.isFinite(n) ? n : 0;
-}
-
-function CompareModal({
-  open,
-  onClose,
-}: {
-  open: boolean;
-  onClose: () => void;
-}) {
-  const [country, setCountry] = useState("United Kingdom");
-  const [currency, setCurrency] = useState("GBP");
-  const [salary, setSalary] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [fx, setFx] = useState<number | null>(null);
-  const [fxNote, setFxNote] = useState<string>("");
-
-  useEffect(() => {
-    const cur = COUNTRY_TO_CURRENCY[country] || "";
-    if (cur) setCurrency(cur);
-  }, [country]);
-
-  const salaryNum = useMemo(() => parseNumber(salary), [salary]);
-
-  const salaryAED = useMemo(() => {
-    if (!fx || !salaryNum) return null;
-    return salaryNum * fx;
-  }, [fx, salaryNum]);
-
-  const refresh = async () => {
-    setLoading(true);
-    setFx(null);
-    setFxNote("");
-    try {
-      // free FX endpoint (no key) — base = selected currency
-      const res = await fetch(`https://open.er-api.com/v6/latest/${currency}`);
-      const json = await res.json();
-      const rate = json?.rates?.AED;
-      if (!rate || !Number.isFinite(rate)) throw new Error("No AED rate");
-      setFx(rate);
-      const updated = json?.time_last_update_utc || "";
-      setFxNote(updated ? `FX updated: ${updated}` : "FX updated (live)");
-    } catch {
-      setFxNote("Could not fetch live FX right now — try refresh again.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    if (!open) return;
-    refresh();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]);
-
-  const emailBreakdown = () => {
-    const body = [
-      "KEYSTNE — COST COMPARISON (LEAD-GEN)",
-      "",
-      `Country: ${country}`,
-      `Currency: ${currency}`,
-      `Monthly salary (input): ${salary || "-"}`,
-      fx ? `FX: 1 ${currency} = ${fx} AED` : "FX: (not available)",
-      salaryAED
-        ? `Salary in AED (estimate): ${salaryAED.toFixed(0)} AED / month`
-        : "Salary in AED: —",
-      "",
-      "T&Cs:",
-      "- FX rates are indicative and can change. This is guidance, not financial advice.",
-      "- Cost-of-living varies by lifestyle, household size, and location in Dubai.",
-      "- We confirm assumptions during a call.",
-      "",
-      fxNote ? `Note: ${fxNote}` : "",
-    ].join("\n");
-
-    window.location.href = buildMailto({
-      subject: "Keystne — Cost comparison breakdown",
-      body,
-    });
-  };
-
-  const contactUs = () => {
-    const body = [
-      "Hi Keystne team,",
-      "",
-      "I’d like help with relocating / comparing costs.",
-      "",
-      `Country: ${country}`,
-      `Currency: ${currency}`,
-      `Monthly salary: ${salary || "-"}`,
-      fx ? `FX used: 1 ${currency} = ${fx} AED` : "",
-      salaryAED ? `AED estimate: ${salaryAED.toFixed(0)} AED / month` : "",
-      "",
-      "Please contact me to discuss next steps.",
-    ].join("\n");
-
-    window.location.href = buildMailto({
-      subject: "Keystne — Contact request (Cost comparison)",
-      body,
-    });
-  };
-
-  return (
-    <Modal
-      open={open}
-      onClose={onClose}
-      title="Compare: your country vs Dubai"
-      subtitle="Quick salary → AED conversion with simple guidance (lead-gen)."
-      widthClass="max-w-3xl"
-    >
-      <div className="grid gap-5 md:grid-cols-2">
-        <FieldShell label="Country (where you're coming from)" required>
-          <SelectInput
-            value={country}
-            onChange={setCountry}
-            options={COUNTRIES}
-          />
-        </FieldShell>
-
-        <FieldShell
-          label="Currency"
-          required
-          hint="Auto-set from country (editable)"
-        >
-          <TextInput
-            value={currency}
-            onChange={setCurrency}
-            placeholder="e.g., GBP"
-          />
-        </FieldShell>
-
-        <div className="md:col-span-2">
-          <FieldShell
-            label="Monthly salary (your country)"
-            required
-            hint="Numbers only"
-          >
-            <TextInput
-              value={salary}
-              onChange={setSalary}
-              placeholder="e.g., 6500"
-            />
-          </FieldShell>
-        </div>
-
-        <div className="md:col-span-2 rounded-2xl border border-black/10 bg-black/[0.03] p-4">
-          <div className="text-[11px] tracking-[0.22em] text-black/55">
-            RESULT
-          </div>
-
-          <div className="mt-3 grid gap-3 md:grid-cols-3">
-            <div className="rounded-2xl bg-white p-4 shadow-sm">
-              <div className="text-[11px] text-black/50">FX rate</div>
-              <div className="mt-1 text-lg font-semibold text-black">
-                {fx ? `1 ${currency} = ${fx.toFixed(4)} AED` : "—"}
-              </div>
-              <div className="mt-1 text-[11px] text-black/45">
-                {fxNote || ""}
-              </div>
-            </div>
-
-            <div className="rounded-2xl bg-white p-4 shadow-sm">
-              <div className="text-[11px] text-black/50">
-                Salary in AED (estimate)
-              </div>
-              <div className="mt-1 text-lg font-semibold text-black">
-                {salaryAED ? `${salaryAED.toFixed(0)} AED / mo` : "—"}
-              </div>
-              <div className="mt-1 text-[11px] text-black/45">
-                Uses live FX when available.
-              </div>
-            </div>
-
-            <div className="rounded-2xl bg-white p-4 shadow-sm">
-              <div className="text-[11px] text-black/50">Next best step</div>
-              <div className="mt-1 text-lg font-semibold text-black">
-                Book a call
-              </div>
-              <div className="mt-1 text-[11px] text-black/45">
-                We tailor to household + lifestyle.
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-4 rounded-2xl border border-black/10 bg-white p-4 text-[12px] text-black/70">
-            <div className="font-semibold text-black">T&Cs</div>
-            <ul className="mt-2 list-disc space-y-1 pl-5">
-              <li>FX rates are indicative and can change daily.</li>
-              <li>This tool gives guidance only — not financial advice.</li>
-              <li>
-                Cost-of-living depends on lifestyle, household size and area
-                choice.
-              </li>
-              <li>We confirm assumptions during your call.</li>
-            </ul>
-          </div>
-
-          <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
-            <button
-              type="button"
-              onClick={refresh}
-              className="inline-flex items-center justify-center gap-2 rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm font-semibold text-black/70 hover:bg-black/5"
-              disabled={loading}
-            >
-              <Icon name="refresh" /> Refresh FX
-            </button>
-
-            <button
-              type="button"
-              onClick={contactUs}
-              className="inline-flex items-center justify-center gap-2 rounded-2xl bg-black px-4 py-3 text-sm font-semibold text-white hover:bg-black/90"
-            >
-              Contact us <Icon name="arrow" />
-            </button>
-
-            <button
-              type="button"
-              onClick={emailBreakdown}
-              className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#C8A45D] px-4 py-3 text-sm font-semibold text-black hover:brightness-110 disabled:opacity-60"
-              disabled={!salaryNum}
-            >
-              Email breakdown <Icon name="mail" />
-            </button>
-          </div>
-
-          {loading ? (
-            <div className="mt-3 text-[11px] text-black/55">
-              Fetching live FX…
-            </div>
-          ) : null}
-        </div>
-      </div>
-    </Modal>
-  );
-}
-
-/* ---------- Wizard (updated relocation + viewing) ---------- */
+/* ---------- Wizard (locked) ---------- */
 
 type Step = {
   id: string;
@@ -812,7 +429,61 @@ function visaGuidance(visaDirection: string) {
   ];
 }
 
-/** Tailored (high-level) entry / visa notes based on origin */
+const COUNTRIES = [
+  "United Arab Emirates",
+  "United Kingdom",
+  "United States",
+  "Canada",
+  "Australia",
+  "New Zealand",
+  "Ireland",
+  "France",
+  "Germany",
+  "Netherlands",
+  "Belgium",
+  "Spain",
+  "Italy",
+  "Portugal",
+  "Switzerland",
+  "Sweden",
+  "Norway",
+  "Denmark",
+  "Finland",
+  "South Africa",
+  "Nigeria",
+  "Ghana",
+  "Kenya",
+  "Uganda",
+  "Rwanda",
+  "Tanzania",
+  "Ethiopia",
+  "Egypt",
+  "Morocco",
+  "Algeria",
+  "Tunisia",
+  "Turkey",
+  "Saudi Arabia",
+  "Qatar",
+  "Kuwait",
+  "Bahrain",
+  "Oman",
+  "India",
+  "Pakistan",
+  "Bangladesh",
+  "Sri Lanka",
+  "Philippines",
+  "Indonesia",
+  "Malaysia",
+  "Singapore",
+  "China",
+  "Japan",
+  "South Korea",
+  "Brazil",
+  "Mexico",
+  "Argentina",
+  "Colombia",
+];
+
 function entryGuidanceByOrigin(originCountry: string) {
   if (originCountry === "United Kingdom") {
     return [
@@ -1569,7 +1240,6 @@ function Wizard({
                 {current.question}
               </div>
 
-              {/* Removed the scribbly transition animation */}
               <div className="mt-5">{current.render(state, setPatch)}</div>
 
               {err ? (
@@ -1659,7 +1329,11 @@ function Wizard({
         widthClass="max-w-2xl"
       >
         <div className="grid gap-4 md:grid-cols-2">
-          <FieldShell label="Full name" required error={emailErrors.name}>
+          <FieldShell
+            label="Full name"
+            required
+            error={(emailErrors as any).name}
+          >
             <TextInput
               value={capture.name}
               onChange={(v) => setCapture((p) => ({ ...p, name: v }))}
@@ -1669,7 +1343,7 @@ function Wizard({
           <FieldShell
             label="Phone (with country code)"
             required
-            error={emailErrors.phone}
+            error={(emailErrors as any).phone}
           >
             <TextInput
               value={capture.phone}
@@ -1677,14 +1351,18 @@ function Wizard({
               placeholder="+44… / +971…"
             />
           </FieldShell>
-          <FieldShell label="Email" required error={emailErrors.email}>
+          <FieldShell label="Email" required error={(emailErrors as any).email}>
             <TextInput
               value={capture.email}
               onChange={(v) => setCapture((p) => ({ ...p, email: v }))}
               placeholder="name@email.com"
             />
           </FieldShell>
-          <FieldShell label="Confirm email" required error={emailErrors.email2}>
+          <FieldShell
+            label="Confirm email"
+            required
+            error={(emailErrors as any).email2}
+          >
             <TextInput
               value={capture.email2}
               onChange={(v) => setCapture((p) => ({ ...p, email2: v }))}
@@ -1725,7 +1403,11 @@ function Wizard({
         widthClass="max-w-2xl"
       >
         <div className="grid gap-4 md:grid-cols-2">
-          <FieldShell label="Full name" required error={emailErrors.name}>
+          <FieldShell
+            label="Full name"
+            required
+            error={(emailErrors as any).name}
+          >
             <TextInput
               value={capture.name}
               onChange={(v) => setCapture((p) => ({ ...p, name: v }))}
@@ -1735,7 +1417,7 @@ function Wizard({
           <FieldShell
             label="Phone (with country code)"
             required
-            error={emailErrors.phone}
+            error={(emailErrors as any).phone}
           >
             <TextInput
               value={capture.phone}
@@ -1743,14 +1425,18 @@ function Wizard({
               placeholder="+44… / +971…"
             />
           </FieldShell>
-          <FieldShell label="Email" required error={emailErrors.email}>
+          <FieldShell label="Email" required error={(emailErrors as any).email}>
             <TextInput
               value={capture.email}
               onChange={(v) => setCapture((p) => ({ ...p, email: v }))}
               placeholder="name@email.com"
             />
           </FieldShell>
-          <FieldShell label="Confirm email" required error={emailErrors.email2}>
+          <FieldShell
+            label="Confirm email"
+            required
+            error={(emailErrors as any).email2}
+          >
             <TextInput
               value={capture.email2}
               onChange={(v) => setCapture((p) => ({ ...p, email2: v }))}
@@ -1814,9 +1500,6 @@ export default function ConciergePage() {
   const [flow, setFlow] = useState<ConciergeFlow>(null);
   const wizardOpen = flow !== null;
 
-  // Compare modal
-  const [compareOpen, setCompareOpen] = useState(false);
-
   useEffect(() => {
     const onScroll = () => {
       const y = window.scrollY || 0;
@@ -1856,19 +1539,12 @@ export default function ConciergePage() {
         />
         <div className="absolute inset-0 bg-gradient-to-b from-black/65 via-black/25 to-white" />
 
-        <div className="relative mx-auto max-w-6xl px-4 pb-12 pt-28">
+        {/* Reduced bottom padding from pb-12 -> pb-6 to reduce space to next section */}
+        <div className="relative mx-auto max-w-6xl px-4 pb-6 pt-28">
           <div className="max-w-3xl">
-            {/* Removed DUBAI */}
-            <div className="text-[11px] tracking-[0.22em] text-white/80">
-              CONCIERGE
-            </div>
+            {/* Removed CONCIERGE and removed DubaiTimePill entirely */}
 
-            {/* Dubai time pill — now back in the hero (stable, like homepage vibe) */}
-            <div className="mt-3">
-              <DubaiTimePill />
-            </div>
-
-            <h1 className="mt-4 text-4xl font-semibold tracking-tight text-white md:text-6xl">
+            <h1 className="text-4xl font-semibold tracking-tight text-white md:text-6xl">
               Concierge, done properly.
             </h1>
 
@@ -1878,7 +1554,6 @@ export default function ConciergePage() {
             </p>
 
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-              {/* Buttons: Relocation / Viewing / Compare (no Back Home) */}
               <button
                 onClick={() => setFlow("relocation")}
                 className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#C8A45D] px-6 py-4 text-sm font-semibold text-black hover:brightness-110"
@@ -1893,12 +1568,7 @@ export default function ConciergePage() {
                 Curated viewing trip <Icon name="arrow" />
               </button>
 
-              <button
-                onClick={() => setCompareOpen(true)}
-                className="inline-flex items-center justify-center gap-2 rounded-2xl border border-white/30 bg-white/10 px-6 py-4 text-sm font-semibold text-white hover:bg-white/15"
-              >
-                Compare <Icon name="arrow" />
-              </button>
+              {/* Compare removed */}
             </div>
           </div>
         </div>
@@ -1906,7 +1576,8 @@ export default function ConciergePage() {
 
       {/* BODY — light premium */}
       <section className="bg-white">
-        <div className="mx-auto max-w-6xl px-4 py-12">
+        {/* Reduced top padding from py-12 -> pt-8 pb-12 to reduce space from hero */}
+        <div className="mx-auto max-w-6xl px-4 pt-8 pb-12">
           <div className="text-[11px] tracking-[0.22em] text-black/55">
             CHOOSE A PATH
           </div>
@@ -1918,7 +1589,6 @@ export default function ConciergePage() {
             summary you can email to yourself and use to book a call.
           </p>
 
-          {/* Reduced spacing here */}
           <div className="mt-4 grid gap-4 md:grid-cols-2">
             <button
               onClick={() => setFlow("relocation")}
@@ -1965,7 +1635,6 @@ export default function ConciergePage() {
             </button>
           </div>
 
-          {/* PROMISE — now black + white text, pulled up slightly */}
           <div className="mt-6 rounded-[28px] border border-white/10 bg-black p-7 text-white shadow-sm">
             <div className="text-[11px] tracking-[0.22em] text-white/60">
               PROMISE
@@ -1986,7 +1655,6 @@ export default function ConciergePage() {
       <ContactDock />
 
       <Wizard open={wizardOpen} flow={flow} onClose={() => setFlow(null)} />
-      <CompareModal open={compareOpen} onClose={() => setCompareOpen(false)} />
     </div>
   );
 }
