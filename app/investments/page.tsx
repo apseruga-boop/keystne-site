@@ -14,6 +14,9 @@ import { CONTACT } from "../../components/site/config";
  * 4) Remove “Strategy” monetary values → show percentages only
  * 5) Add more strategy options (still lead-gen + finance-aware)
  * 6) Remove the long-term projection graph section entirely
+ * 7) NAV wrapper forced white bg + black text (top bar)
+ * 8) Calculator stacked on top, "What this means" below (no side-by-side)
+ * 9) Discover communities hover gold (like rest)
  * Everything else kept as-is style-wise.
  */
 
@@ -571,8 +574,8 @@ export default function InvestmentsPage() {
 
   return (
     <div className="min-h-screen bg-white text-black">
-      {/* NAV (already in correct style: white box + black text + gold hover from your existing component) */}
-      <div className="fixed left-0 right-0 top-0 z-50">
+      {/* NAV (forced white top bar background + black text) */}
+      <div className="fixed left-0 right-0 top-0 z-50 bg-white text-black">
         <KeystneNav />
       </div>
 
@@ -590,18 +593,18 @@ export default function InvestmentsPage() {
             investment approaches (illustrative).
           </p>
 
-          {/* Discover communities button (just above calculator) */}
+          {/* Discover communities button (hover gold like rest) */}
           <div className="mt-6">
             <Link
               href="/discover-communities"
-              className="inline-flex items-center justify-center gap-2 rounded-2xl border border-black/10 bg-white px-5 py-3 text-sm font-semibold text-black/70 hover:bg-black/5"
+              className="inline-flex items-center justify-center gap-2 rounded-2xl border border-black/10 bg-white px-5 py-3 text-sm font-semibold text-black/70 hover:bg-[#C8A45D] hover:text-black"
             >
               Discover communities <Icon name="arrow" />
             </Link>
           </div>
 
-          {/* Calculator moved to top section (no graph) */}
-          <div className="mt-6 grid gap-6 lg:grid-cols-[0.95fr_1.05fr]">
+          {/* Stacked layout: calculator on top, what this means below */}
+          <div className="mt-6 grid gap-6">
             {/* CALCULATOR */}
             <div className="rounded-[28px] border border-black/10 bg-white p-6 shadow-ks">
               <div className="text-[11px] tracking-[0.22em] text-black/55">
@@ -799,7 +802,7 @@ export default function InvestmentsPage() {
               </div>
             </div>
 
-            {/* INTERPRETATION (kept) */}
+            {/* INTERPRETATION */}
             <div className="rounded-[28px] border border-black/10 bg-white p-6 shadow-ks">
               <div className="text-[11px] tracking-[0.22em] text-black/55">
                 WHAT THIS MEANS
