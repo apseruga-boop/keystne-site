@@ -2,6 +2,9 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
+import KeystneNav from "../../components/site/KeystneNav";
+import KeystneFooter from "../../components/site/KeystneFooter";
+import { CONTACT } from "../../components/site/config";
 
 type ImmigrationRule = {
   country: string;
@@ -30,37 +33,154 @@ function cx(...classes: Array<string | false | null | undefined>) {
 
 const GOLD = "#B89A5B";
 
+/** mailto helper (keeps Arthur + Stuart connected via CONTACT like other pages) */
+function buildMailto(args: { subject: string; body: string }) {
+  const to = CONTACT.emailArthur;
+  const cc = CONTACT.emailStuart;
+  const subject = encodeURIComponent(args.subject);
+  const body = encodeURIComponent(args.body);
+  return `mailto:${to}?cc=${cc}&subject=${subject}&body=${body}`;
+}
+
+function parseVisaDays(maxStay: string) {
+  const m = String(maxStay || "").match(/(\d+)\s*days/i);
+  return m ? Number(m[1]) : null;
+}
+
 const IMMIGRATION: ImmigrationRule[] = [
+  // 90-day (commonly referenced in airline summaries; illustrative only)
   {
     country: "United Kingdom",
     entry: "Visa on arrival",
-    maxStay: "Up to 90 days total (multiple-entry) within 6 months",
+    maxStay: "90 days (multiple-entry) within 6 months",
     notes: [
       "Designed for short stays; for long-term living/working you’ll typically need a residence visa (e.g., employment, investor, freelance, student).",
       "Rules can change—always verify before travel.",
     ],
-    sourceHint: "Flydubai: 90-day visa on arrival list",
+    sourceHint: "Airline summary list (illustrative)",
   },
   {
     country: "United States",
     entry: "Visa on arrival",
-    maxStay: "Up to 90 days total (multiple-entry) within 6 months",
+    maxStay: "90 days (multiple-entry) within 6 months",
     notes: [
       "For long-term rentals, we usually align your tenancy timeline with your visa/residency pathway.",
       "Rules can change—always verify before travel.",
     ],
-    sourceHint: "Flydubai: 90-day visa on arrival list",
+    sourceHint: "Airline summary list (illustrative)",
   },
   {
     country: "Canada",
     entry: "Visa on arrival",
-    maxStay: "Up to 90 days total (multiple-entry) within 6 months",
+    maxStay: "90 days (multiple-entry) within 6 months",
     notes: [
       "If you’re relocating for work, we can coordinate move-in dates around your employment visa process.",
       "Rules can change—always verify before travel.",
     ],
-    sourceHint: "Flydubai: 90-day visa on arrival list",
+    sourceHint: "Airline summary list (illustrative)",
   },
+  {
+    country: "France",
+    entry: "Visa on arrival",
+    maxStay: "90 days (multiple-entry) within 6 months",
+    notes: [
+      "Short stays are usually straightforward; for long-term living/working you’ll typically need a residence visa route.",
+      "Rules can change—always verify before travel.",
+    ],
+    sourceHint: "Airline summary list (illustrative)",
+  },
+  {
+    country: "Germany",
+    entry: "Visa on arrival",
+    maxStay: "90 days (multiple-entry) within 6 months",
+    notes: [
+      "For longer stays, your residency pathway matters—plan lease timing accordingly.",
+      "Rules can change—always verify before travel.",
+    ],
+    sourceHint: "Airline summary list (illustrative)",
+  },
+  {
+    country: "Italy",
+    entry: "Visa on arrival",
+    maxStay: "90 days (multiple-entry) within 6 months",
+    notes: [
+      "For longer stays, confirm your residence status before signing long commitments.",
+      "Rules can change—always verify before travel.",
+    ],
+    sourceHint: "Airline summary list (illustrative)",
+  },
+  {
+    country: "Spain",
+    entry: "Visa on arrival",
+    maxStay: "90 days (multiple-entry) within 6 months",
+    notes: [
+      "For long-term relocation, align your lease length with your visa/residency timeline.",
+      "Rules can change—always verify before travel.",
+    ],
+    sourceHint: "Airline summary list (illustrative)",
+  },
+  {
+    country: "Netherlands",
+    entry: "Visa on arrival",
+    maxStay: "90 days (multiple-entry) within 6 months",
+    notes: [
+      "Short stays are typically manageable; long-term stays require a residency pathway.",
+      "Rules can change—always verify before travel.",
+    ],
+    sourceHint: "Airline summary list (illustrative)",
+  },
+  {
+    country: "Belgium",
+    entry: "Visa on arrival",
+    maxStay: "90 days (multiple-entry) within 6 months",
+    notes: [
+      "We help you plan tenancy timing so you don’t over-commit before residency is confirmed.",
+      "Rules can change—always verify before travel.",
+    ],
+    sourceHint: "Airline summary list (illustrative)",
+  },
+  {
+    country: "Switzerland",
+    entry: "Visa on arrival",
+    maxStay: "90 days (multiple-entry) within 6 months",
+    notes: [
+      "For long-term living, verify the right visa/residency route early.",
+      "Rules can change—always verify before travel.",
+    ],
+    sourceHint: "Airline summary list (illustrative)",
+  },
+  {
+    country: "Australia",
+    entry: "Visa on arrival",
+    maxStay: "90 days (multiple-entry) within 6 months",
+    notes: [
+      "For long-term relocation, plan lease commitments around residency confirmation.",
+      "Rules can change—always verify before travel.",
+    ],
+    sourceHint: "Airline summary list (illustrative)",
+  },
+  {
+    country: "New Zealand",
+    entry: "Visa on arrival",
+    maxStay: "90 days (multiple-entry) within 6 months",
+    notes: [
+      "If you’re moving for work, align move-in date with visa timelines.",
+      "Rules can change—always verify before travel.",
+    ],
+    sourceHint: "Airline summary list (illustrative)",
+  },
+  {
+    country: "Singapore",
+    entry: "Visa on arrival",
+    maxStay: "30 days (free on arrival)",
+    notes: [
+      "For longer stays, residency pathway planning is key before signing longer leases.",
+      "Rules can change—always verify before travel.",
+    ],
+    sourceHint: "Airline summary list (illustrative)",
+  },
+
+  // 30-day examples (kept)
   {
     country: "Republic of Ireland",
     entry: "Visa on arrival",
@@ -69,7 +189,7 @@ const IMMIGRATION: ImmigrationRule[] = [
       "If you plan to stay longer, you’ll likely need to transition to a residency route.",
       "Rules can change—always verify before travel.",
     ],
-    sourceHint: "Flydubai: 30-day visa on arrival list",
+    sourceHint: "Airline summary list (illustrative)",
   },
   {
     country: "Mauritius",
@@ -79,8 +199,42 @@ const IMMIGRATION: ImmigrationRule[] = [
       "For long-term living, we’ll guide you on the rental process timeline and what docs landlords typically request.",
       "Rules can change—always verify before travel.",
     ],
-    sourceHint: "Flydubai: 30-day visa on arrival list",
+    sourceHint: "Airline summary list (illustrative)",
   },
+
+  // GCC
+  {
+    country: "Saudi Arabia (GCC)",
+    entry: "GCC visa-free",
+    maxStay: "Visa-free entry (duration depends on UAE entry rules)",
+    notes: [
+      "GCC nationals often have simplified entry; confirm the exact duration/requirements before travel.",
+      "Rules can change—always verify before travel.",
+    ],
+    sourceHint: "GCC entry note (illustrative)",
+  },
+  {
+    country: "Kuwait (GCC)",
+    entry: "GCC visa-free",
+    maxStay: "Visa-free entry (duration depends on UAE entry rules)",
+    notes: [
+      "GCC nationals often have simplified entry; confirm the exact duration/requirements before travel.",
+      "Rules can change—always verify before travel.",
+    ],
+    sourceHint: "GCC entry note (illustrative)",
+  },
+  {
+    country: "Qatar (GCC)",
+    entry: "GCC visa-free",
+    maxStay: "Visa-free entry (duration depends on UAE entry rules)",
+    notes: [
+      "GCC nationals often have simplified entry; confirm the exact duration/requirements before travel.",
+      "Rules can change—always verify before travel.",
+    ],
+    sourceHint: "GCC entry note (illustrative)",
+  },
+
+  // Conditional / Visa required (kept)
   {
     country: "India",
     entry: "Conditional visa on arrival",
@@ -90,40 +244,62 @@ const IMMIGRATION: ImmigrationRule[] = [
       "If not eligible, you’ll need to arrange a visa before travel.",
       "Rules can change—always verify before travel.",
     ],
-    sourceHint: "Flydubai: India 14-day VoA eligibility notes",
+    sourceHint: "Airline summary note (illustrative)",
   },
   {
     country: "Kenya",
     entry: "Visa required before travel",
-    maxStay: "Varies by visa type (commonly 30–60 days for visit visas)",
+    maxStay: "Varies by visa type",
     notes: [
-      "If your country is not on the visa-on-arrival lists, you generally need to arrange a UAE visa before you travel.",
+      "If your country is not on visa-on-arrival lists, you generally need to arrange a UAE visa before you travel.",
       "For long-term stays (work/relocation), a residence visa route is typically required.",
       "Rules can change—always verify before travel.",
     ],
-    sourceHint: "Flydubai: countries not listed need pre-arranged visa",
+    sourceHint: "Airline summary note (illustrative)",
   },
   {
     country: "Nigeria",
     entry: "Visa required before travel",
-    maxStay: "Varies by visa type (commonly 30–60 days for visit visas)",
+    maxStay: "Varies by visa type",
     notes: [
-      "If your country is not on the visa-on-arrival lists, you generally need to arrange a UAE visa before you travel.",
+      "If your country is not on visa-on-arrival lists, you generally need to arrange a UAE visa before you travel.",
       "For long-term stays (work/relocation), a residence visa route is typically required.",
       "Rules can change—always verify before travel.",
     ],
-    sourceHint: "Flydubai: countries not listed need pre-arranged visa",
+    sourceHint: "Airline summary note (illustrative)",
   },
   {
     country: "South Africa",
     entry: "Visa required before travel",
-    maxStay: "Varies by visa type (commonly 30–60 days for visit visas)",
+    maxStay: "Varies by visa type",
     notes: [
-      "If your country is not on the visa-on-arrival lists, you generally need to arrange a UAE visa before you travel.",
+      "If your country is not on visa-on-arrival lists, you generally need to arrange a UAE visa before you travel.",
       "For long-term stays (work/relocation), a residence visa route is typically required.",
       "Rules can change—always verify before travel.",
     ],
-    sourceHint: "Flydubai: countries not listed need pre-arranged visa",
+    sourceHint: "Airline summary note (illustrative)",
+  },
+  {
+    country: "China",
+    entry: "Visa required before travel",
+    maxStay: "Varies by visa type",
+    notes: [
+      "You’ll typically need to arrange a UAE visa before travel.",
+      "For long-term stays, a residence visa route is usually required.",
+      "Rules can change—always verify before travel.",
+    ],
+    sourceHint: "Illustrative",
+  },
+  {
+    country: "Pakistan",
+    entry: "Visa required before travel",
+    maxStay: "Varies by visa type",
+    notes: [
+      "You’ll typically need to arrange a UAE visa before travel.",
+      "For long-term stays, a residence visa route is usually required.",
+      "Rules can change—always verify before travel.",
+    ],
+    sourceHint: "Illustrative",
   },
 ];
 
@@ -297,37 +473,100 @@ function Modal({
   );
 }
 
+/** Simple inline icons (NO lucide-react) */
+function Icon({
+  name,
+  className = "h-4 w-4",
+}: {
+  name: "whatsapp" | "phone" | "telegram" | "mail";
+  className?: string;
+}) {
+  const common = {
+    className,
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: 2,
+  };
+  switch (name) {
+    case "phone":
+      return (
+        <svg viewBox="0 0 24 24" {...common}>
+          <path d="M22 16.5v3a2 2 0 0 1-2.2 2c-9.6-.8-17-8.2-17.8-17.8A2 2 0 0 1 4 1.5h3a2 2 0 0 1 2 1.7c.1.9.3 1.8.6 2.6a2 2 0 0 1-.5 2.1L8 9c1.6 3.1 4.1 5.6 7.2 7.2l1.1-1.1a2 2 0 0 1 2.1-.5c.8.3 1.7.5 2.6.6a2 2 0 0 1 1.7 2z" />
+        </svg>
+      );
+    case "mail":
+      return (
+        <svg viewBox="0 0 24 24" {...common}>
+          <path d="M4 4h16v16H4z" />
+          <path d="M4 6l8 6 8-6" />
+        </svg>
+      );
+    case "telegram":
+      return (
+        <svg viewBox="0 0 24 24" {...common}>
+          <path d="M22 2L11 13" />
+          <path d="M22 2L15 22l-4-9-9-4 20-7z" />
+        </svg>
+      );
+    case "whatsapp":
+      return (
+        <svg viewBox="0 0 24 24" {...common}>
+          <path d="M20 11.5a8.5 8.5 0 0 1-12.7 7.4L4 20l1.2-3.1A8.5 8.5 0 1 1 20 11.5z" />
+          <path d="M9.5 9.5c.3 2.4 2.6 4.8 5.2 5.2" />
+        </svg>
+      );
+    default:
+      return null;
+  }
+}
+
+/** Contact dock — match the rest of the site (same as other pages) */
 function ContactDock({ onOpen }: { onOpen: () => void }) {
   return (
-    <div className="fixed bottom-7 right-7 z-[70] w-[270px] rounded-3xl border bg-white shadow-xl">
-      <div className="p-4">
+    <div className="fixed bottom-5 right-5 z-40 w-[240px] overflow-hidden rounded-[22px] border border-black/10 bg-white/90 shadow-ks backdrop-blur-xl">
+      <div className="p-2">
         <button
+          type="button"
           onClick={onOpen}
-          className="w-full rounded-full px-4 py-3 text-sm font-semibold text-black"
-          style={{ background: GOLD }}
+          className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[#C8A45D] px-3 py-3 text-[12px] font-semibold text-black hover:brightness-110"
         >
-          WhatsApp us
+          <Icon name="whatsapp" className="h-4 w-4" /> WhatsApp us
         </button>
-
-        <div className="mt-3 space-y-2 text-sm text-black">
-          <div className="flex items-center gap-2 rounded-xl px-3 py-2 hover:bg-black/5">
-            <span>📞</span> <span>Call</span>
+        <div className="mt-2 grid gap-1">
+          <a
+            className="flex items-center gap-2 rounded-2xl px-3 py-2 text-[12px] font-semibold text-black/75 hover:bg-[#C8A45D] hover:text-black"
+            href={CONTACT.phoneTel}
+          >
+            <Icon name="phone" /> Call
+          </a>
+          <a
+            className="flex items-center gap-2 rounded-2xl px-3 py-2 text-[12px] font-semibold text-black/75 hover:bg-[#C8A45D] hover:text-black"
+            href={CONTACT.telegramLink}
+            target="_blank"
+            rel="noreferrer"
+          >
+            <Icon name="telegram" /> Telegram
+          </a>
+          <a
+            className="flex items-center gap-2 rounded-2xl px-3 py-2 text-[12px] font-semibold text-black/75 hover:bg-[#C8A45D] hover:text-black"
+            href={buildMailto({
+              subject: "Keystne — Long-term rental enquiry",
+              body: "Hi Keystne team,\n\nI'd like to enquire about long-term rentals:\n\nName:\nPhone:\nMove-in date:\nBudget (AED/month):\nAreas/requirements:\n\nThank you",
+            })}
+          >
+            <Icon name="mail" /> Email
+          </a>
+          <div className="flex items-center gap-2 rounded-2xl px-3 py-2 text-[12px] font-semibold text-black/55">
+            WeChat ID: {CONTACT.wechatText || "keystne"}
           </div>
-          <div className="flex items-center gap-2 rounded-xl px-3 py-2 hover:bg-black/5">
-            <span>✈️</span> <span>Telegram</span>
-          </div>
-          <div className="flex items-center gap-2 rounded-xl px-3 py-2 hover:bg-black/5">
-            <span>✉️</span> <span>Email</span>
-          </div>
-
-          <div className="pt-1 text-xs text-black/60">WeChat ID: keystne</div>
         </div>
-
-        <div className="mt-4 rounded-2xl bg-black px-4 py-4 text-white">
-          <div className="text-[10px] tracking-[0.35em] text-white/70">
+        <div className="mt-3 rounded-2xl border border-black/10 bg-black px-3 py-3">
+          <div className="text-[10px] tracking-[0.22em] text-white/60">
             DIRECT
           </div>
-          <div className="mt-2 text-sm font-semibold">+971 XX XXX XXXX</div>
+          <div className="mt-1 text-sm font-semibold text-white">
+            {CONTACT.phoneDisplay}
+          </div>
         </div>
       </div>
     </div>
@@ -351,22 +590,21 @@ function ContactModal({
   const [notes, setNotes] = useState("");
 
   const mailtoHref = useMemo(() => {
-    // You can swap these with your real addresses anytime.
-    const to = encodeURIComponent("arthur@keystne.com, stuart@keystne.com");
-    const subject = encodeURIComponent(defaultTopic);
-    const body = encodeURIComponent(
-      [
-        `Name: ${name || "-"}`,
-        `Email: ${email || "-"}`,
-        `From country: ${country || "-"}`,
-        `Budget (AED/month): ${budget || "-"}`,
-        `Move-in: ${moveIn || "-"}`,
-        ``,
-        `Notes:`,
-        notes || "-",
-      ].join("\n")
-    );
-    return `mailto:${to}?subject=${subject}&body=${body}`;
+    const body = [
+      `Name: ${name || "-"}`,
+      `Email: ${email || "-"}`,
+      `From country: ${country || "-"}`,
+      `Budget (AED/month): ${budget || "-"}`,
+      `Move-in: ${moveIn || "-"}`,
+      ``,
+      `Notes:`,
+      notes || "-",
+    ].join("\n");
+
+    return buildMailto({
+      subject: defaultTopic,
+      body,
+    });
   }, [name, email, country, budget, moveIn, notes, defaultTopic]);
 
   return (
@@ -469,77 +707,20 @@ function ContactModal({
   );
 }
 
-function TopNav() {
-  const links = [
-    { label: "Concierge", href: "/concierge" },
-    { label: "Discover Communities", href: "/communities" },
-    { label: "Investments", href: "/investments" },
-    { label: "Long-Term", href: "/long-term" },
-    { label: "Property Management", href: "/property-management" },
-    { label: "About", href: "/about" },
-  ];
-
-  return (
-    <div className="sticky top-6 z-[60] mx-auto w-full max-w-6xl px-4">
-      <div className="rounded-[28px] border bg-white shadow-[0_24px_60px_rgba(0,0,0,0.12)]">
-        <div className="flex items-center justify-between gap-6 px-6 py-4">
-          <a href="/" className="text-3xl font-black tracking-tight text-black">
-            keystne
-          </a>
-
-          <nav className="hidden items-center gap-8 md:flex">
-            {links.map((l) => (
-              <a
-                key={l.href}
-                href={l.href}
-                className={cx(
-                  "text-sm font-semibold text-black transition-colors",
-                  l.href === "/long-term" && "underline underline-offset-8"
-                )}
-                onMouseEnter={(e) =>
-                  ((e.currentTarget.style.color as any) = GOLD)
-                }
-                onMouseLeave={(e) =>
-                  ((e.currentTarget.style.color as any) = "black")
-                }
-              >
-                {l.label}
-              </a>
-            ))}
-          </nav>
-
-          <div className="md:hidden">
-            <Pill>Menu</Pill>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function Footer() {
-  return (
-    <footer className="mx-auto mt-20 max-w-6xl px-4 pb-14">
-      <div className="rounded-3xl border bg-white p-8">
-        <div className="text-xl font-black text-black">keystne</div>
-        <p className="mt-2 max-w-3xl text-sm text-black/70">
-          We believe in redefining property experiences — turning complex
-          transactions into moments of clarity, trust, and lasting value.
-        </p>
-        <div className="mt-8 text-xs text-black/50">
-          Keystne Real Estate — Registered in Dubai (details to be added).{" "}
-          <br />© {new Date().getFullYear()} Keystne. All rights reserved.
-        </div>
-      </div>
-    </footer>
-  );
-}
-
 export default function LongTermRentalsPage() {
   const [selectedCountry, setSelectedCountry] =
     useState<string>("United Kingdom");
   const [openService, setOpenService] = useState<Service | null>(null);
   const [contactOpen, setContactOpen] = useState(false);
+
+  // Hide top nav on scroll (disappears as soon as user starts scrolling down)
+  const [showTopNav, setShowTopNav] = useState(true);
+  useEffect(() => {
+    const onScroll = () => setShowTopNav(window.scrollY <= 5);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
 
   const rule = useMemo(() => {
     return (
@@ -549,11 +730,39 @@ export default function LongTermRentalsPage() {
 
   const countries = useMemo(() => IMMIGRATION.map((r) => r.country).sort(), []);
 
+  const visaLine = useMemo(() => {
+    if (rule.entry === "Visa required before travel") {
+      return {
+        tone: "warn" as const,
+        text: "You need to apply for a UAE visa before travel.",
+      };
+    }
+    const days = parseVisaDays(rule.maxStay);
+    if (days) {
+      return {
+        tone: "ok" as const,
+        text: `You can stay up to ${days} days in Dubai without applying in advance (illustrative — verify eligibility).`,
+      };
+    }
+    return {
+      tone: "ok" as const,
+      text: "Entry may be possible without applying in advance (illustrative — verify eligibility and duration).",
+    };
+  }, [rule]);
+
   return (
     <div className="min-h-screen bg-white text-black">
-      <TopNav />
+      {/* NAV — match other pages + hide on scroll */}
+      <div
+        className={cx(
+          "fixed left-0 right-0 top-0 z-50 bg-white text-black transition-transform duration-200",
+          showTopNav ? "translate-y-0" : "-translate-y-full"
+        )}
+      >
+        <KeystneNav />
+      </div>
 
-      <main className="mx-auto max-w-6xl px-4 pt-10">
+      <main className="mx-auto max-w-6xl px-4 pt-28">
         <div className="text-xs tracking-[0.35em] text-black/50">
           LONG-TERM RENTALS
         </div>
@@ -595,9 +804,24 @@ export default function LongTermRentalsPage() {
               </select>
             </div>
 
+            {/* Visa-free days / visa required line directly below the country selector */}
+            <div
+              className={cx(
+                "mt-4 rounded-2xl border bg-white p-4 text-sm",
+                visaLine.tone === "warn" ? "text-black/80" : "text-black/80"
+              )}
+              style={{ borderColor: "rgba(0,0,0,0.10)" }}
+            >
+              <div className="text-xs tracking-[0.25em] text-black/50">
+                SUMMARY
+              </div>
+              <div className="mt-2">{visaLine.text}</div>
+            </div>
+
+            {/* Shortlist CTA immediately below (as requested) */}
             <button
               onClick={() => setContactOpen(true)}
-              className="mt-5 w-full rounded-full px-5 py-3 text-sm font-semibold text-black"
+              className="mt-4 w-full rounded-full px-5 py-3 text-sm font-semibold text-black"
               style={{ background: GOLD }}
             >
               Request a rental shortlist
@@ -770,7 +994,8 @@ export default function LongTermRentalsPage() {
         </section>
       </main>
 
-      <Footer />
+      {/* Footer — match other pages */}
+      <KeystneFooter />
 
       {/* Service details modal */}
       <Modal
@@ -829,7 +1054,7 @@ export default function LongTermRentalsPage() {
         defaultTopic="Keystne — Long-term rental enquiry"
       />
 
-      {/* Floating contact box (same style) */}
+      {/* Floating contact box — match other pages */}
       <ContactDock onOpen={() => setContactOpen(true)} />
     </div>
   );
