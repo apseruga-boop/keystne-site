@@ -4,7 +4,7 @@ import React, { useMemo, useState } from "react";
 import Modal from "../site/Modal";
 import { buildMailto, isValidEmail, sanitizePhone } from "../site/mailto";
 import { CONTACT } from "../site/config";
-import { IconArrowRight, IconCheck, IconCalendar } from "../site/Icons";
+import { IconArrowRight, IconCheck } from "../site/Icons";
 
 type ContactWhen = "ASAP" | "1 month" | "2 months" | "6 months";
 type Channel =
@@ -310,7 +310,7 @@ export default function ConciergeLeadModal({
           >
             {channel === "Book a call" && when === "ASAP" ? (
               <>
-                Choose a time <IconCalendar className="h-4 w-4" />
+                Choose a time <IconArrowRight className="h-4 w-4" />
               </>
             ) : (
               <>
