@@ -3,6 +3,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import KeystneNav from "../../components/site/KeystneNav";
 import KeystneFooter from "../../components/site/KeystneFooter";
+import ContactDock from "../../components/concierge/ContactDock";
 import { CONTACT, HOME_VIDEOS } from "../../components/site/config";
 
 /**
@@ -15,6 +16,10 @@ import { CONTACT, HOME_VIDEOS } from "../../components/site/config";
  *    - Remove “Email this summary” button + Email modal
  *    - Booking email no longer includes a summary block
  * Everything else unchanged.
+ *
+ * ADDITIONAL (Consistency-only):
+ * 3) Use shared white ContactDock component (consistent across pages)
+ *    → removed the inline ContactDock() function in this file.
  */
 
 type ConciergeFlow = "relocation" | "viewing" | null;
@@ -316,61 +321,6 @@ function Progress({ step, total }: { step: number; total: number }) {
   );
 }
 
-/** Contact dock — unchanged */
-function ContactDock() {
-  return (
-    <div className="fixed bottom-5 right-5 z-40 w-[240px] overflow-hidden rounded-[22px] border border-black/10 bg-white/90 shadow-ks backdrop-blur-xl">
-      <div className="p-2">
-        <a
-          className="flex items-center justify-center gap-2 rounded-2xl bg-[#C8A45D] px-3 py-3 text-[12px] font-semibold text-black hover:brightness-110"
-          href={CONTACT.whatsappLink}
-          target="_blank"
-          rel="noreferrer"
-        >
-          <Icon name="whatsapp" className="h-4 w-4" /> WhatsApp us
-        </a>
-        <div className="mt-2 grid gap-1">
-          <a
-            className="flex items-center gap-2 rounded-2xl px-3 py-2 text-[12px] font-semibold text-black/75 hover:bg-[#C8A45D] hover:text-black"
-            href={CONTACT.phoneTel}
-          >
-            <Icon name="phone" /> Call
-          </a>
-          <a
-            className="flex items-center gap-2 rounded-2xl px-3 py-2 text-[12px] font-semibold text-black/75 hover:bg-[#C8A45D] hover:text-black"
-            href={CONTACT.telegramLink}
-            target="_blank"
-            rel="noreferrer"
-          >
-            <Icon name="telegram" /> Telegram
-          </a>
-          <a
-            className="flex items-center gap-2 rounded-2xl px-3 py-2 text-[12px] font-semibold text-black/75 hover:bg-[#C8A45D] hover:text-black"
-            href={buildMailto({
-              subject: "Keystne enquiry",
-              body: "Hi Keystne team,\n\nI'd like to enquire about:\n\nName:\nPhone:\nPreferred contact time:\nDetails:\n\nThank you",
-            })}
-          >
-            <Icon name="mail" /> Email
-          </a>
-          <div className="flex items-center gap-2 rounded-2xl px-3 py-2 text-[12px] font-semibold text-black/55">
-            <Icon name="wechat" /> {CONTACT.wechatText || "WeChat ID: keystne"}
-          </div>
-        </div>
-
-        <div className="mt-3 rounded-2xl border border-black/10 bg-black px-3 py-3">
-          <div className="text-[10px] tracking-[0.22em] text-white/60">
-            DIRECT
-          </div>
-          <div className="mt-1 text-sm font-semibold text-white">
-            {CONTACT.phoneDisplay}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 /* ---------- Countries (pre-populated) ---------- */
 const COUNTRIES = [
   "United Arab Emirates",
@@ -448,10 +398,6 @@ function computeRunwayWeeksRelocation(s: any) {
   return weeks;
 }
 
-/**
- * Origin-aware visitor entry + quick “what it usually means” for first steps.
- * High-level (lead-gen). Rules can change; we verify on a call.
- */
 function originEntryNotes(originCountry?: string) {
   const c = (originCountry || "").trim();
 
@@ -1301,11 +1247,9 @@ function Wizard({
 
 /* ---------- Page ---------- */
 export default function ConciergePage() {
-  // NAV hide-on-scroll-down (page-only)
   const [navHidden, setNavHidden] = useState(false);
   const lastY = useRef(0);
 
-  // Wizard open state
   const [flow, setFlow] = useState<ConciergeFlow>(null);
   const wizardOpen = flow !== null;
 
@@ -1324,7 +1268,6 @@ export default function ConciergePage() {
 
   return (
     <div className="min-h-screen bg-white text-black">
-      {/* Wrapper to hide/show nav on scroll direction */}
       <div
         className={[
           "fixed left-0 right-0 top-0 z-50 transition-all duration-300",
@@ -1336,7 +1279,6 @@ export default function ConciergePage() {
         <KeystneNav />
       </div>
 
-      {/* HERO (video stays) */}
       <section className="relative min-h-[70vh] overflow-hidden">
         <video
           className="absolute inset-0 h-full w-full object-cover opacity-85"
@@ -1348,7 +1290,6 @@ export default function ConciergePage() {
         />
         <div className="absolute inset-0 bg-gradient-to-b from-black/65 via-black/25 to-white" />
 
-        {/* CHANGE: Reduced bottom padding slightly so “Choose a path” sits immediately after hero copy */}
         <div className="relative mx-auto max-w-6xl px-4 pb-6 pt-28">
           <div className="max-w-3xl">
             <div className="text-[11px] tracking-[0.22em] text-white/80">
@@ -1361,13 +1302,10 @@ export default function ConciergePage() {
               Two ways we support you: relocate seamlessly, or fly in for a
               curated viewing trip and invest with clarity.
             </p>
-
-            {/* (Hero buttons were removed previously — left unchanged) */}
           </div>
         </div>
       </section>
 
-      {/* BODY — moved up (Dubai time section removed) */}
       <section className="bg-white">
         <div className="mx-auto max-w-6xl px-4 pt-0 pb-12">
           <div className="text-[11px] tracking-[0.22em] text-black/55">
@@ -1427,7 +1365,6 @@ export default function ConciergePage() {
             </button>
           </div>
 
-          {/* PROMISE — unchanged */}
           <div className="mt-8 rounded-[28px] border border-black/10 bg-white p-7 text-black shadow-sm">
             <div className="text-[11px] tracking-[0.22em] text-black/55">
               PROMISE

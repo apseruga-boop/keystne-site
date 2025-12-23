@@ -1,24 +1,12 @@
 "use client";
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import KeystneNav from "../components/site/KeystneNav";
 import KeystneFooter from "../components/site/KeystneFooter";
 import DubaiBadge from "../components/site/DubaiBadge";
 import ContactDock from "../components/concierge/ContactDock";
-import { CONTACT, HOME_VIDEOS, SERVICES } from "../components/site/config";
-
-function mailtoFor(reason: string) {
-  const to = CONTACT.emailArthur;
-  const cc = CONTACT.emailStuart;
-
-  const subject = encodeURIComponent(`Keystne enquiry — ${reason}`);
-  const body = encodeURIComponent(
-    `Hi Keystne team,\n\nI'm interested in: ${reason}\n\nName:\nPhone:\nPreferred contact time:\nDetails:\n\nThank you`
-  );
-
-  return `mailto:${to}?cc=${cc}&subject=${subject}&body=${body}`;
-}
+import { HOME_VIDEOS, SERVICES } from "../components/site/config";
 
 function VideoTile({
   title,
@@ -76,8 +64,6 @@ export default function HomePage() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  const heroMail = useMemo(() => mailtoFor("Concierge (Relocation)"), []);
-
   return (
     <div className="min-h-screen bg-ksBlack text-ksWhite">
       <KeystneNav />
@@ -121,12 +107,13 @@ export default function HomePage() {
             </p>
 
             <div className="mt-7 flex flex-col gap-3 sm:flex-row">
-              <a
-                href={heroMail}
+              {/* CHANGE: Start with concierge now routes to /concierge */}
+              <Link
+                href="/concierge"
                 className="ks-btn-gold ks-gold-ring inline-flex items-center justify-center rounded-2xl bg-white/15 px-6 py-4 text-sm font-semibold text-white hover:bg-white/20"
               >
                 Start with concierge →
-              </a>
+              </Link>
 
               <Link
                 href="/communities"
