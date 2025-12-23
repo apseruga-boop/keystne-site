@@ -61,7 +61,7 @@ function Icon({
     case "refresh":
       return (
         <svg viewBox="0 0 24 24" {...common}>
-          <path d="M21 12a9 9 0 1 1-3-6.7" />
+          <path d="M21 12a9 9 0 0 1-12.7 7.4L4 20l1.2-3.1A8.5 8.5 0 1 1 20 11.5z" />
           <path d="M21 3v6h-6" />
         </svg>
       );
@@ -197,6 +197,16 @@ function ContactModal({
     setMessage((m) => m || `I’m interested in ${defaultCommunity}.`);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, defaultCommunity]);
+
+  // NEW: prevent background scroll when modal is open
+  useEffect(() => {
+    if (!open) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [open]);
 
   if (!open) return null;
 
@@ -1217,7 +1227,11 @@ export default function DiscoverCommunitiesPage() {
                   <button
                     type="button"
                     className="inline-flex items-center justify-center gap-2 rounded-2xl bg-black px-4 py-3 text-sm font-semibold text-white hover:bg-black/90"
-                    onClick={() => setContactOpen(true)}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setContactOpen(true);
+                    }}
                   >
                     Contact us <Icon name="arrow" />
                   </button>
@@ -1237,7 +1251,7 @@ export default function DiscoverCommunitiesPage() {
               </div>
 
               {/* Changed from max-h-[680px] to viewport-based so it scrolls fully */}
-              <div className="max-h-[calc(100vh-260px)] overflow-y-auto p-4 pb-6">
+              <div className="max-h-[calc(100dvh-260px)] max-h-[calc(100vh-260px)] overflow-y-auto p-4 pb-10">
                 <div className="grid gap-3">
                   {COMMUNITIES.map((c) => {
                     const active = c.id === selectedId;
