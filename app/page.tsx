@@ -19,25 +19,24 @@ function VideoTile({
   href: string;
   video: string;
 }) {
-  const vidRef = useRef<HTMLVideoElement | null>(null);
+  const vidRef = useRef<HTMLIFrameElement | null>(null);
 
   return (
     <Link
       href={href}
       className="group relative block h-[460px] overflow-hidden border border-white/10 bg-black shadow-ks"
-      onMouseEnter={() => vidRef.current?.play().catch(() => undefined)}
-      onMouseLeave={() => vidRef.current?.pause()}
-      onFocus={() => vidRef.current?.play().catch(() => undefined)}
-      onBlur={() => vidRef.current?.pause()}
+      // NOTE: YouTube iframe cannot be play/pause controlled like <video> without API.
+      // Keeping handlers here would do nothing, so we leave them out to avoid errors.
       style={{ borderRadius: "0px" }}
     >
-      <video
+      <iframe
         ref={vidRef}
         className="absolute inset-0 h-full w-full object-cover opacity-85"
         src={video}
-        muted
-        loop
-        playsInline
+        title={title}
+        frameBorder="0"
+        allow="autoplay; encrypted-media; picture-in-picture"
+        allowFullScreen={false}
       />
       <div className="absolute inset-0 bg-gradient-to-b from-black/25 via-black/35 to-black/85" />
 
@@ -73,13 +72,13 @@ export default function HomePage() {
 
       {/* HERO */}
       <section className="relative min-h-[92vh] overflow-hidden">
-        <video
+        <iframe
           className="absolute inset-0 h-full w-full object-cover opacity-80"
           src={HOME_VIDEOS.hero}
-          autoPlay
-          muted
-          loop
-          playsInline
+          title="Keystne Hero Video"
+          frameBorder="0"
+          allow="autoplay; encrypted-media; picture-in-picture"
+          allowFullScreen={false}
         />
         <div className="absolute inset-0 bg-gradient-to-b from-black/75 via-black/25 to-ksBlack" />
 
@@ -107,7 +106,6 @@ export default function HomePage() {
             </p>
 
             <div className="mt-7 flex flex-col gap-3 sm:flex-row">
-              {/* CHANGE: Start with concierge now routes to /concierge */}
               <Link
                 href="/concierge"
                 className="ks-btn-gold ks-gold-ring inline-flex items-center justify-center rounded-2xl bg-white/15 px-6 py-4 text-sm font-semibold text-white hover:bg-white/20"

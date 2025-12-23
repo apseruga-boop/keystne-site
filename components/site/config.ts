@@ -9,15 +9,15 @@ export const CONTACT = {
 };
 
 export const HOME_VIDEOS = {
-  hero: "https://www.youtube.com/watch?v=AuSm1jj-nuE",
+  hero: "https://www.youtube.com/shorts/30tJKZgiAmM?autoplay=1&mute=1&loop=1&playlist=AuSm1jj-nuE&controls=0&rel=0&modestbranding=1&playsinline=1",
   concierge:
-    "https://player.vimeo.com/external/487015782.hd.mp4?s=5303a874674efcff8ff4ec8ebf6ed187ab66d578&profile_id=175",
+    "https://www.youtube.com/embed/JuoXoYLivZ4?autoplay=1&mute=1&loop=1&playlist=JuoXoYLivZ4&controls=0&rel=0&modestbranding=1&playsinline=1",
   investments:
-    "https://player.vimeo.com/external/487015782.hd.mp4?s=5303a874674efcff8ff4ec8ebf6ed187ab66d578&profile_id=175",
+    "https://www.youtube.com/shorts/sSpDuQnVrHc?autoplay=1&mute=1&loop=1&playlist=HEpRHVehWZ8&controls=0&rel=0&modestbranding=1&playsinline=1",
   longterm:
-    "https://player.vimeo.com/external/487015782.hd.mp4?s=5303a874674efcff8ff4ec8ebf6ed187ab66d578&profile_id=175",
+    "https://www.youtube.com/shorts/AoaS60l1Rg4?autoplay=1&mute=1&loop=1&playlist=Y2ifOxFa6C0&controls=0&rel=0&modestbranding=1&playsinline=1",
   management:
-    "https://player.vimeo.com/external/487015782.hd.mp4?s=5303a874674efcff8ff4ec8ebf6ed187ab66d578&profile_id=175",
+    "https://www.youtube.com/embed/kA9CNESB8Fw?autoplay=1&mute=1&loop=1&playlist=kA9CNESB8Fw&controls=0&rel=0&modestbranding=1&playsinline=1",
 };
 
 // Keep these exported so other pages never break builds.
