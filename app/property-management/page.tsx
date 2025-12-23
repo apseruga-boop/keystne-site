@@ -1,13 +1,18 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, useRef } from "react";
+import Link from "next/link";
 import KeystneNav from "../../components/site/KeystneNav";
 import KeystneFooter from "../../components/site/KeystneFooter";
 import { CONTACT } from "../../components/site/config";
 
-/* =========================
-   Helpers
-========================= */
+/** Investments — Invest with clarity (UPDATED per Arthur)
+ * Changes made ONLY:
+ * 1) Hide top nav when user starts scrolling down (re-appears when scrolling up)
+ * 2) Make currency selector more visually prominent (bigger + less “calculator” feel)
+ * Everything else kept as-is.
+ */
+
 function isValidEmail(email: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email.trim());
 }
@@ -20,9 +25,12 @@ function buildMailto(args: { subject: string; body: string }) {
   return `mailto:${to}?cc=${cc}&subject=${subject}&body=${body}`;
 }
 
-/* =========================
-   Inline icons (NO lucide-react)
-========================= */
+function parseNumber(v: string) {
+  const n = Number(String(v || "").replace(/[^0-9.]/g, ""));
+  return Number.isFinite(n) ? n : 0;
+}
+
+/** Simple inline icons (NO lucide-react) */
 function Icon({
   name,
   className = "h-4 w-4",
@@ -35,11 +43,7 @@ function Icon({
     | "arrow"
     | "check"
     | "x"
-    | "spark"
-    | "shield"
-    | "doc"
-    | "wrench"
-    | "chart";
+    | "refresh";
   className?: string;
 }) {
   const common = {
@@ -69,6 +73,13 @@ function Icon({
           <path d="M6 6l12 12" />
         </svg>
       );
+    case "refresh":
+      return (
+        <svg viewBox="0 0 24 24" {...common}>
+          <path d="M21 12a9 9 0 1 1-3-6.7" />
+          <path d="M21 3v6h-6" />
+        </svg>
+      );
     case "phone":
       return (
         <svg viewBox="0 0 24 24" {...common}>
@@ -96,56 +107,18 @@ function Icon({
           <path d="M9.5 9.5c.3 2.4 2.6 4.8 5.2 5.2" />
         </svg>
       );
-    case "spark":
-      return (
-        <svg viewBox="0 0 24 24" {...common}>
-          <path d="M12 2l1.2 5.1L18 9l-4.8 1.9L12 16l-1.2-5.1L6 9l4.8-1.9L12 2z" />
-          <path d="M19 14l.8 3.2L23 18l-3.2.8L19 22l-.8-3.2L15 18l3.2-.8L19 14z" />
-        </svg>
-      );
-    case "shield":
-      return (
-        <svg viewBox="0 0 24 24" {...common}>
-          <path d="M12 2l8 4v6c0 5-3.4 9.4-8 10-4.6-.6-8-5-8-10V6l8-4z" />
-          <path d="M9 12l2 2 4-5" />
-        </svg>
-      );
-    case "doc":
-      return (
-        <svg viewBox="0 0 24 24" {...common}>
-          <path d="M7 3h7l3 3v15a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z" />
-          <path d="M14 3v4h4" />
-        </svg>
-      );
-    case "wrench":
-      return (
-        <svg viewBox="0 0 24 24" {...common}>
-          <path d="M14.7 6.3a4 4 0 0 0-5.6 5.6l-6 6a2 2 0 1 0 2.8 2.8l6-6a4 4 0 0 0 5.6-5.6l-2 2-2.8-2.8 2-2z" />
-        </svg>
-      );
-    case "chart":
-      return (
-        <svg viewBox="0 0 24 24" {...common}>
-          <path d="M4 19V5" />
-          <path d="M4 19h16" />
-          <path d="M7 15l3-4 3 2 4-6" />
-        </svg>
-      );
     default:
       return null;
   }
 }
 
-/* =========================
-   UI primitives (same style)
-========================= */
 function Modal({
   open,
   onClose,
   title,
   subtitle,
   children,
-  widthClass = "max-w-3xl",
+  widthClass = "max-w-2xl",
 }: {
   open: boolean;
   onClose: () => void;
@@ -230,16 +203,19 @@ function TextInput({
   value,
   onChange,
   placeholder,
+  inputMode = "text",
 }: {
   value: string;
   onChange: (v: string) => void;
   placeholder?: string;
+  inputMode?: React.HTMLAttributes<HTMLInputElement>["inputMode"];
 }) {
   return (
     <input
       value={value}
       onChange={(e) => onChange(e.target.value)}
       placeholder={placeholder}
+      inputMode={inputMode}
       className="w-full bg-transparent text-sm text-black outline-none placeholder:text-black/30"
     />
   );
@@ -249,16 +225,21 @@ function SelectInput({
   value,
   onChange,
   options,
+  className = "",
 }: {
   value: string;
   onChange: (v: string) => void;
   options: string[];
+  className?: string;
 }) {
   return (
     <select
       value={value}
       onChange={(e) => onChange(e.target.value)}
-      className="w-full bg-transparent text-sm text-black outline-none"
+      className={[
+        "w-full bg-transparent text-sm text-black outline-none",
+        className,
+      ].join(" ")}
     >
       <option value="">Select…</option>
       {options.map((o) => (
@@ -303,9 +284,7 @@ function Segmented({
   );
 }
 
-/* =========================
-   Contact dock — same as other pages
-========================= */
+/** Contact dock — same vibe/size as other pages */
 function ContactDock() {
   return (
     <div className="fixed bottom-5 right-5 z-40 w-[240px] overflow-hidden rounded-[22px] border border-black/10 bg-white/90 shadow-ks backdrop-blur-xl">
@@ -318,7 +297,6 @@ function ContactDock() {
         >
           <Icon name="whatsapp" className="h-4 w-4" /> WhatsApp us
         </a>
-
         <div className="mt-2 grid gap-1">
           <a
             className="flex items-center gap-2 rounded-2xl px-3 py-2 text-[12px] font-semibold text-black/75 hover:bg-[#C8A45D] hover:text-black"
@@ -337,21 +315,16 @@ function ContactDock() {
           <a
             className="flex items-center gap-2 rounded-2xl px-3 py-2 text-[12px] font-semibold text-black/75 hover:bg-[#C8A45D] hover:text-black"
             href={buildMailto({
-              subject: "Keystne enquiry — Property management",
-              body: "Hi Keystne team,\n\nI'd like to enquire about property management.\n\nName:\nPhone:\nProperty/community:\nTimeline:\nNotes:\n\nThank you",
+              subject: "Keystne enquiry",
+              body: "Hi Keystne team,\n\nI'd like to enquire about:\n\nName:\nPhone:\nPreferred contact time:\nDetails:\n\nThank you",
             })}
           >
             <Icon name="mail" /> Email
           </a>
           <div className="flex items-center gap-2 rounded-2xl px-3 py-2 text-[12px] font-semibold text-black/55">
-            {/* Keep WeChat line if your CONTACT config has it; fallback included */}
-            <span className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-black/20 text-[10px] font-bold">
-              W
-            </span>
-            {CONTACT.wechatText || "WeChat ID: keystne"}
+            WeChat ID: {CONTACT.wechatText || "keystne"}
           </div>
         </div>
-
         <div className="mt-3 rounded-2xl border border-black/10 bg-black px-3 py-3">
           <div className="text-[10px] tracking-[0.22em] text-white/60">
             DIRECT
@@ -365,9 +338,27 @@ function ContactDock() {
   );
 }
 
-/* =========================
-   Page: Property Management
-========================= */
+/* ---------- Investment Calculator ---------- */
+
+const CURRENCIES = [
+  "AED",
+  "USD",
+  "GBP",
+  "EUR",
+  "CAD",
+  "AUD",
+  "NZD",
+  "CHF",
+  "SGD",
+  "ZAR",
+  "NGN",
+  "KES",
+  "UGX",
+  "RWF",
+  "INR",
+  "PKR",
+];
+
 const COMMUNITIES = [
   "Downtown Dubai",
   "Business Bay",
@@ -380,748 +371,584 @@ const COMMUNITIES = [
   "Dubai Hills Estate",
   "Arabian Ranches",
   "JVC",
-  "Dubai Creek Harbour",
   "Al Barsha",
-  "Mirdif",
-  "The Greens",
-  "The Views",
-  "Arabian Ranches 2",
-  "Dubai South",
-  "Dubai Silicon Oasis",
-  "Motor City",
+  "Dubai Creek Harbour",
 ];
 
-const PROPERTY_TYPES = [
-  "Apartment",
-  "Townhouse",
-  "Villa",
-  "Penthouse",
-  "Mixed / not sure",
+const COMMUNITY_FACTOR: Record<string, number> = {
+  "Downtown Dubai": 1.05,
+  DIFC: 1.05,
+  "City Walk": 1.04,
+  "Palm Jumeirah": 1.08,
+  "Dubai Marina": 1.03,
+  JBR: 1.03,
+  "Dubai Hills Estate": 1.02,
+  "Dubai Creek Harbour": 1.01,
+  "Business Bay": 1.0,
+  JLT: 0.98,
+  "Arabian Ranches": 0.99,
+  JVC: 0.96,
+  "Al Barsha": 0.97,
+};
+
+type Strategy =
+  | "Long-term lease"
+  | "Short-term (Airbnb)"
+  | "Mid-term (1–6 months)"
+  | "Off-plan flip";
+
+const STRATEGIES: Strategy[] = [
+  "Long-term lease",
+  "Short-term (Airbnb)",
+  "Mid-term (1–6 months)",
+  "Off-plan flip",
 ];
 
-type LeadForm = {
+function defaultAssumptions(strategy: Strategy) {
+  if (strategy === "Long-term lease") {
+    return { netYield: 5.5, occupancy: 92, seasonalityUplift: 0 };
+  }
+  if (strategy === "Short-term (Airbnb)") {
+    return { netYield: 7.5, occupancy: 75, seasonalityUplift: 18 };
+  }
+  if (strategy === "Mid-term (1–6 months)") {
+    return { netYield: 6.5, occupancy: 82, seasonalityUplift: 8 };
+  }
+  // Off-plan flip (no occupancy; treat as annualised uplift)
+  return { netYield: 10.0, occupancy: 0, seasonalityUplift: 0 };
+}
+
+type ShortlistCapture = {
   name: string;
   email: string;
   email2: string;
   phone: string;
-  community: string;
-  propertyType: string;
-  bedrooms: string;
-  status: string;
-  startWhen: string;
-  services: string[];
-  notes: string;
-  preferredChannel: string;
 };
 
-const SERVICE_TILES: Array<{
-  id: string;
-  title: string;
-  desc: string;
-  bullets: string[];
-  icon: React.ComponentProps<typeof Icon>["name"];
-}> = [
-  {
-    id: "tenant-placement",
-    title: "Tenant placement (premium)",
-    desc: "Marketing, viewings, screening, and a clean handover — without the noise.",
-    bullets: [
-      "Listing + enquiries",
-      "Screening & selection",
-      "Move-in coordination",
-    ],
-    icon: "spark",
-  },
-  {
-    id: "rent-collection",
-    title: "Rent collection + owner reporting",
-    desc: "Reliable collection, reminders, and clear reporting you can actually use.",
-    bullets: [
-      "Collection & follow-up",
-      "Owner statements",
-      "Simple annual summary",
-    ],
-    icon: "chart",
-  },
-  {
-    id: "maintenance",
-    title: "Maintenance + repairs coordination",
-    desc: "Fast response. Quality trades. Minimal disruption to your tenant.",
-    bullets: ["Issue logging", "Quotes + approvals", "Completion confirmation"],
-    icon: "wrench",
-  },
-  {
-    id: "inspections",
-    title: "Routine inspections",
-    desc: "Protect condition, spot issues early, and keep standards high.",
-    bullets: ["Scheduled checks", "Photo notes", "Action list + follow-up"],
-    icon: "shield",
-  },
-  {
-    id: "contracts",
-    title: "Contracts + renewals support",
-    desc: "Renewals, notices, and admin kept tidy — with a clear timeline.",
-    bullets: ["Renewal reminders", "Documentation support", "Tenant comms"],
-    icon: "doc",
-  },
-  {
-    id: "utilities-compliance",
-    title: "Utilities + compliance support",
-    desc: "We help coordinate the practical bits that keep everything moving.",
-    bullets: [
-      "Move-in/out coordination",
-      "Utility activation support",
-      "Compliance checks (where relevant)",
-    ],
-    icon: "check",
-  },
-];
+export default function InvestmentsPage() {
+  // NAV hide on scroll down / show on scroll up (disappear as soon as scrolling starts)
+  const [navHidden, setNavHidden] = useState(false);
+  const lastY = useRef(0);
 
-function ServiceModal({
-  open,
-  onClose,
-  tile,
-  onStart,
-}: {
-  open: boolean;
-  onClose: () => void;
-  tile: (typeof SERVICE_TILES)[number] | null;
-  onStart: () => void;
-}) {
-  if (!tile) return null;
-  return (
-    <Modal
-      open={open}
-      onClose={onClose}
-      title={tile.title}
-      subtitle="Quick overview (premium + clean)."
-      widthClass="max-w-2xl"
-    >
-      <div className="grid gap-4">
-        <div className="rounded-2xl border border-black/10 bg-black/[0.03] p-4 text-sm text-black/70">
-          {tile.desc}
-        </div>
+  useEffect(() => {
+    const onScroll = () => {
+      const y = window.scrollY || 0;
+      const delta = y - lastY.current;
 
-        <div className="rounded-2xl border border-black/10 bg-white p-4">
-          <div className="text-[11px] tracking-[0.22em] text-black/55">
-            WHAT’S INCLUDED
-          </div>
-          <ul className="mt-3 space-y-2 text-sm text-black/75">
-            {tile.bullets.map((b) => (
-              <li key={b} className="flex items-start gap-2">
-                <span className="mt-[2px] inline-flex h-5 w-5 items-center justify-center rounded-full bg-[#C8A45D] text-black">
-                  <Icon name="check" className="h-3.5 w-3.5" />
-                </span>
-                <span>{b}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
+      if (y > 0 && delta > 0) setNavHidden(true);
+      if (delta < 0) setNavHidden(false);
 
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm font-semibold text-black/70 hover:bg-black/5"
-          >
-            Close
-          </button>
-          <button
-            type="button"
-            onClick={onStart}
-            className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#C8A45D] px-5 py-3 text-sm font-semibold text-black hover:brightness-110"
-          >
-            Request this service <Icon name="arrow" />
-          </button>
-        </div>
-      </div>
-    </Modal>
-  );
-}
+      lastY.current = y;
+    };
+    lastY.current = window.scrollY || 0;
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
 
-function LeadModal({
-  open,
-  onClose,
-  presetServices,
-  title = "Request property management",
-}: {
-  open: boolean;
-  onClose: () => void;
-  presetServices?: string[];
-  title?: string;
-}) {
-  const [form, setForm] = useState<LeadForm>({
+  // FX
+  const [currency, setCurrency] = useState<string>("USD");
+  const [depositLocal, setDepositLocal] = useState<string>("20000");
+  const [fx, setFx] = useState<number | null>(null); // 1 CUR = fx AED
+  const [fxNote, setFxNote] = useState<string>("");
+  const [fxLoading, setFxLoading] = useState(false);
+
+  // Buying power
+  const [depositPct, setDepositPct] = useState<number>(10); // min 10
+  const [community, setCommunity] = useState<string>("Downtown Dubai");
+
+  // Strategy (percentages only)
+  const [strategy, setStrategy] = useState<Strategy>("Long-term lease");
+
+  // Lead gen modal
+  const [shortlistOpen, setShortlistOpen] = useState(false);
+  const [capture, setCapture] = useState<ShortlistCapture>({
     name: "",
     email: "",
     email2: "",
     phone: "",
-    community: "",
-    propertyType: "",
-    bedrooms: "",
-    status: "",
-    startWhen: "",
-    services: presetServices || [],
-    notes: "",
-    preferredChannel: "WhatsApp",
   });
 
-  const errors = useMemo(() => {
-    const e: Record<string, string> = {};
-    if (!form.name.trim()) e.name = "Add your name.";
-    if (!form.phone.trim()) e.phone = "Add your phone (with country code).";
-    if (!form.email.trim()) e.email = "Add your email.";
-    else if (!isValidEmail(form.email)) e.email = "Email looks incorrect.";
-    if (!form.email2.trim()) e.email2 = "Confirm your email.";
-    else if (form.email2.trim() !== form.email.trim())
-      e.email2 = "Emails do not match.";
+  const depositLocalNum = useMemo(
+    () => parseNumber(depositLocal),
+    [depositLocal]
+  );
 
-    if (!form.community) e.community = "Select a community.";
-    if (!form.propertyType) e.propertyType = "Select a property type.";
-    if (!form.bedrooms) e.bedrooms = "Select bedrooms.";
-    if (!form.status) e.status = "Select property status.";
-    if (!form.startWhen) e.startWhen = "Select a start timeline.";
-    if (!form.services.length) e.services = "Pick at least one service.";
-    return e;
-  }, [form]);
-
-  const canSubmit = Object.keys(errors).length === 0;
-
-  const toggleService = (s: string) => {
-    setForm((p) => {
-      const has = p.services.includes(s);
-      return {
-        ...p,
-        services: has ? p.services.filter((x) => x !== s) : [...p.services, s],
-      };
-    });
+  const refreshFx = async () => {
+    if (!currency) return;
+    setFxLoading(true);
+    setFx(null);
+    setFxNote("");
+    try {
+      // free FX endpoint (no key) — base = selected currency
+      const res = await fetch(`https://open.er-api.com/v6/latest/${currency}`);
+      const json = await res.json();
+      const rate = json?.rates?.AED;
+      if (!rate || !Number.isFinite(rate)) throw new Error("No AED rate");
+      setFx(rate);
+      const updated = json?.time_last_update_utc || "";
+      setFxNote(updated ? `FX updated: ${updated}` : "FX updated (live)");
+    } catch {
+      setFxNote("Could not fetch live FX right now — try refresh again.");
+    } finally {
+      setFxLoading(false);
+    }
   };
 
-  const submit = () => {
+  useEffect(() => {
+    refreshFx();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currency]);
+
+  const depositAED = useMemo(() => {
+    if (!depositLocalNum) return 0;
+    if (currency === "AED") return depositLocalNum;
+    if (!fx) return 0;
+    return depositLocalNum * fx;
+  }, [depositLocalNum, currency, fx]);
+
+  const pctSafe = useMemo(
+    () => Math.max(10, Math.min(60, depositPct)),
+    [depositPct]
+  );
+
+  const estimatedPropertyValue = useMemo(() => {
+    if (!depositAED || !pctSafe) return 0;
+    const base = depositAED / (pctSafe / 100);
+    const factor = COMMUNITY_FACTOR[community] ?? 1;
+    return base * factor;
+  }, [depositAED, pctSafe, community]);
+
+  const assumptions = useMemo(() => defaultAssumptions(strategy), [strategy]);
+
+  // Errors for shortlist
+  const emailErrors = useMemo(() => {
+    const e: Record<string, string> = {};
+    if (!capture.name.trim()) e.name = "Add your name.";
+    if (!capture.phone.trim()) e.phone = "Add your phone (with country code).";
+    if (!capture.email.trim()) e.email = "Add your email.";
+    else if (!isValidEmail(capture.email)) e.email = "Email looks incorrect.";
+    if (!capture.email2.trim()) e.email2 = "Confirm your email.";
+    else if (capture.email2.trim() !== capture.email.trim())
+      e.email2 = "Emails do not match.";
+    return e;
+  }, [capture]);
+
+  const canSend = Object.keys(emailErrors).length === 0;
+
+  const openShortlistEmail = () => {
+    const factor = COMMUNITY_FACTOR[community] ?? 1;
     const body = [
-      "KEYSTNE — PROPERTY MANAGEMENT LEAD",
+      "KEYSTNE — SHORTLIST REQUEST (INVESTMENTS)",
       "",
-      `Client name: ${form.name}`,
-      `Client email: ${form.email}`,
-      `Client phone: ${form.phone}`,
-      `Preferred channel: ${form.preferredChannel}`,
+      `Client name: ${capture.name}`,
+      `Client email: ${capture.email}`,
+      `Client phone: ${capture.phone}`,
       "",
-      `Community: ${form.community}`,
-      `Property type: ${form.propertyType}`,
-      `Bedrooms: ${form.bedrooms}`,
-      `Status: ${form.status}`,
-      `Start timeline: ${form.startWhen}`,
+      "Inputs:",
+      `- Deposit (local): ${depositLocalNum || 0} ${currency}`,
+      `- FX: ${
+        currency === "AED"
+          ? "n/a (AED)"
+          : fx
+          ? `1 ${currency} = ${fx} AED`
+          : "not available"
+      }`,
+      `- Deposit in AED (estimate): ${
+        depositAED ? `${Math.round(depositAED).toLocaleString()} AED` : "—"
+      }`,
+      `- Deposit % assumed: ${pctSafe}%`,
+      `- Desired community: ${community} (factor ${factor})`,
+      `- Strategy: ${strategy}`,
       "",
-      `Services requested: ${form.services.join(", ")}`,
+      "Outputs (illustrative):",
+      `- Estimated buying power (property value): ${
+        estimatedPropertyValue
+          ? `${Math.round(estimatedPropertyValue).toLocaleString()} AED`
+          : "—"
+      }`,
+      `- Net yield (illustrative): ${assumptions.netYield}% p.a.`,
+      strategy === "Off-plan flip"
+        ? `- Annualised uplift (illustrative): ${assumptions.netYield}% (no occupancy)`
+        : `- Occupancy (illustrative): ${assumptions.occupancy}%`,
+      strategy === "Short-term (Airbnb)"
+        ? `- Seasonality uplift (illustrative): +${assumptions.seasonalityUplift}% in peak months`
+        : "",
       "",
-      form.notes?.trim() ? `Notes:\n${form.notes.trim()}` : "Notes: (none)",
+      "Note:",
+      "- We’ll validate with real comparable listings and current market conditions.",
+      "- This is guidance only (not financial advice).",
       "",
-      "Disclaimer: This is an enquiry. Final scope and fees are confirmed after a call and property review.",
-    ].join("\n");
+      fxNote ? `FX note: ${fxNote}` : "",
+    ]
+      .filter(Boolean)
+      .join("\n");
 
     window.location.href = buildMailto({
-      subject: "Keystne — Property management enquiry",
+      subject: "Keystne — Shortlist request (Investments)",
       body,
     });
   };
 
   return (
-    <Modal
-      open={open}
-      onClose={onClose}
-      title={title}
-      subtitle="Quick details → we’ll respond fast (lead-gen)."
-      widthClass="max-w-4xl"
-    >
-      <div className="grid gap-5 md:grid-cols-2">
-        <FieldShell label="Full name" required error={errors.name}>
-          <TextInput
-            value={form.name}
-            onChange={(v) => setForm((p) => ({ ...p, name: v }))}
-            placeholder="Your name"
-          />
-        </FieldShell>
-
-        <FieldShell
-          label="Phone (with country code)"
-          required
-          error={errors.phone}
-        >
-          <TextInput
-            value={form.phone}
-            onChange={(v) => setForm((p) => ({ ...p, phone: v }))}
-            placeholder="+971… / +44…"
-          />
-        </FieldShell>
-
-        <FieldShell label="Email" required error={errors.email}>
-          <TextInput
-            value={form.email}
-            onChange={(v) => setForm((p) => ({ ...p, email: v }))}
-            placeholder="name@email.com"
-          />
-        </FieldShell>
-
-        <FieldShell label="Confirm email" required error={errors.email2}>
-          <TextInput
-            value={form.email2}
-            onChange={(v) => setForm((p) => ({ ...p, email2: v }))}
-            placeholder="Repeat email"
-          />
-        </FieldShell>
-
-        <div className="md:col-span-2 grid gap-4 md:grid-cols-3">
-          <FieldShell label="Community" required error={errors.community}>
-            <SelectInput
-              value={form.community}
-              onChange={(v) => setForm((p) => ({ ...p, community: v }))}
-              options={COMMUNITIES}
-            />
-          </FieldShell>
-
-          <FieldShell
-            label="Property type"
-            required
-            error={errors.propertyType}
-          >
-            <SelectInput
-              value={form.propertyType}
-              onChange={(v) => setForm((p) => ({ ...p, propertyType: v }))}
-              options={PROPERTY_TYPES}
-            />
-          </FieldShell>
-
-          <FieldShell label="Bedrooms" required error={errors.bedrooms}>
-            <SelectInput
-              value={form.bedrooms}
-              onChange={(v) => setForm((p) => ({ ...p, bedrooms: v }))}
-              options={["Studio", "1", "2", "3", "4+"]}
-            />
-          </FieldShell>
-        </div>
-
-        <div className="md:col-span-2 grid gap-4 md:grid-cols-2">
-          <FieldShell label="Property status" required error={errors.status}>
-            <SelectInput
-              value={form.status}
-              onChange={(v) => setForm((p) => ({ ...p, status: v }))}
-              options={["Vacant", "Currently tenanted", "Not sure"]}
-            />
-          </FieldShell>
-
-          <FieldShell
-            label="When do you want us to start?"
-            required
-            error={errors.startWhen}
-          >
-            <SelectInput
-              value={form.startWhen}
-              onChange={(v) => setForm((p) => ({ ...p, startWhen: v }))}
-              options={["ASAP", "This month", "Next 1–2 months", "3+ months"]}
-            />
-          </FieldShell>
-        </div>
-
-        <div className="md:col-span-2">
-          <FieldShell label="Preferred contact channel" required>
-            <Segmented
-              value={form.preferredChannel}
-              onChange={(v) => setForm((p) => ({ ...p, preferredChannel: v }))}
-              options={["WhatsApp", "Call", "Email"]}
-            />
-          </FieldShell>
-        </div>
-
-        <div className="md:col-span-2">
-          <div className="flex items-end justify-between gap-3">
-            <div className="text-xs font-semibold tracking-wide text-black/70">
-              Services you want <span className="text-black/35">*</span>
-            </div>
-            {errors.services ? (
-              <div className="text-[11px] text-red-600/85">
-                {errors.services}
-              </div>
-            ) : null}
-          </div>
-
-          <div className="mt-2 grid gap-2 sm:grid-cols-2">
-            {SERVICE_TILES.map((t) => {
-              const active = form.services.includes(t.title);
-              return (
-                <button
-                  key={t.id}
-                  type="button"
-                  onClick={() => toggleService(t.title)}
-                  className={[
-                    "flex items-center justify-between rounded-2xl border px-4 py-3 text-left text-sm font-semibold transition",
-                    active
-                      ? "border-[#C8A45D]/70 bg-[#C8A45D]/15 text-black"
-                      : "border-black/10 bg-white text-black/70 hover:bg-black/5",
-                  ].join(" ")}
-                >
-                  <span className="flex items-center gap-2">
-                    <span
-                      className={[
-                        "inline-flex h-8 w-8 items-center justify-center rounded-2xl",
-                        active
-                          ? "bg-[#C8A45D] text-black"
-                          : "bg-black/5 text-black/70",
-                      ].join(" ")}
-                    >
-                      <Icon name={t.icon} />
-                    </span>
-                    {t.title}
-                  </span>
-                  <span
-                    className={[
-                      "inline-flex h-5 w-5 items-center justify-center rounded-full",
-                      active
-                        ? "bg-[#C8A45D] text-black"
-                        : "bg-black/10 text-black/40",
-                    ].join(" ")}
-                  >
-                    <Icon
-                      name={active ? "check" : "x"}
-                      className="h-3.5 w-3.5"
-                    />
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        <div className="md:col-span-2">
-          <FieldShell
-            label="Notes (optional)"
-            hint="Any specifics we should know?"
-          >
-            <textarea
-              value={form.notes}
-              onChange={(e) =>
-                setForm((p) => ({ ...p, notes: e.target.value }))
-              }
-              placeholder="e.g., tenant issue, maintenance backlog, overseas owner, prefer monthly reporting, etc."
-              className="h-28 w-full resize-none bg-transparent text-sm text-black outline-none placeholder:text-black/30"
-            />
-          </FieldShell>
-        </div>
-
-        <div className="md:col-span-2 rounded-2xl border border-black/10 bg-black/[0.03] p-4 text-[12px] text-black/70">
-          <div className="font-semibold text-black">Note</div>
-          <div className="mt-1">
-            We’ll confirm scope and fees after a quick call. Timelines,
-            compliance steps and utilities processes can vary by building,
-            tenancy status and current requirements.
-          </div>
-        </div>
-
-        <div className="md:col-span-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm font-semibold text-black/70 hover:bg-black/5"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            onClick={submit}
-            disabled={!canSubmit}
-            className={[
-              "inline-flex items-center justify-center gap-2 rounded-2xl px-5 py-3 text-sm font-semibold transition",
-              canSubmit
-                ? "bg-[#C8A45D] text-black hover:brightness-110"
-                : "bg-black/10 text-black/35 cursor-not-allowed",
-            ].join(" ")}
-          >
-            Open email <Icon name="arrow" />
-          </button>
-        </div>
-      </div>
-    </Modal>
-  );
-}
-
-export default function PropertyManagementPage() {
-  const [serviceModalOpen, setServiceModalOpen] = useState(false);
-  const [leadOpen, setLeadOpen] = useState(false);
-  const [selectedTile, setSelectedTile] = useState<
-    (typeof SERVICE_TILES)[number] | null
-  >(null);
-
-  const openService = (tile: (typeof SERVICE_TILES)[number]) => {
-    setSelectedTile(tile);
-    setServiceModalOpen(true);
-  };
-
-  const startLeadFromTile = (tile?: (typeof SERVICE_TILES)[number] | null) => {
-    setServiceModalOpen(false);
-    setSelectedTile(tile || null);
-    setLeadOpen(true);
-  };
-
-  const presetServices = useMemo(() => {
-    if (!selectedTile) return [];
-    return [selectedTile.title];
-  }, [selectedTile]);
-
-  return (
     <div className="min-h-screen bg-white text-black">
-      {/* NAV WRAPPER (keeps the white pill look consistent) */}
-      <div className="fixed left-0 right-0 top-0 z-50">
-        <div className="mx-auto max-w-6xl px-4 pt-4">
-          <div className="rounded-[28px] border border-black/10 bg-white/95 shadow-ks backdrop-blur">
-            <KeystneNav />
-          </div>
-        </div>
+      {/* NAV (forced white top bar background + black text) */}
+      <div
+        className={[
+          "fixed left-0 right-0 top-0 z-50 bg-white text-black transition-all duration-300",
+          navHidden ? "-translate-y-28 opacity-0 pointer-events-none" : "",
+        ].join(" ")}
+      >
+        <KeystneNav />
       </div>
 
-      {/* HERO */}
+      {/* PAGE */}
       <section className="bg-white">
-        <div className="mx-auto max-w-6xl px-4 pb-10 pt-32">
-          <div className="max-w-4xl">
-            <div className="text-[11px] tracking-[0.22em] text-black/55">
-              PROPERTY MANAGEMENT
-            </div>
-            <h1 className="mt-3 text-4xl font-semibold tracking-tight text-black md:text-6xl">
-              Premium management, without the headaches.
-            </h1>
-            <p className="mt-5 max-w-3xl text-base text-black/70 md:text-lg">
-              We protect your asset, keep standards high, and give you clean
-              visibility — rent, maintenance, contracts and updates — in one
-              place.
-            </p>
-
-            <div className="mt-7 flex flex-col gap-3 sm:flex-row">
-              <button
-                onClick={() => {
-                  setSelectedTile(null);
-                  setLeadOpen(true);
-                }}
-                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#C8A45D] px-6 py-4 text-sm font-semibold text-black hover:brightness-110"
-              >
-                Request management <Icon name="arrow" />
-              </button>
-
-              <a
-                href={CONTACT.whatsappLink}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex items-center justify-center gap-2 rounded-2xl border border-black/10 bg-white px-6 py-4 text-sm font-semibold text-black/70 hover:bg-black/5"
-              >
-                WhatsApp us <Icon name="whatsapp" />
-              </a>
-            </div>
+        <div className="mx-auto max-w-6xl px-4 pb-14 pt-28">
+          <div className="text-[11px] tracking-[0.22em] text-black/55">
+            INVESTMENTS
           </div>
-        </div>
-      </section>
+          <h1 className="mt-2 text-5xl font-semibold tracking-tight text-black md:text-6xl">
+            Invest with clarity.
+          </h1>
+          <p className="mt-4 max-w-3xl text-sm text-black/65">
+            Quickly model what your deposit could unlock — then compare
+            investment approaches (illustrative).
+          </p>
 
-      {/* SERVICES GRID */}
-      <section className="bg-white">
-        <div className="mx-auto max-w-6xl px-4 pb-6">
-          <div className="rounded-[28px] border border-black/10 bg-white p-7 shadow-sm">
-            <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
-              <div>
-                <div className="text-[11px] tracking-[0.22em] text-black/55">
-                  WHAT WE DO
-                </div>
-                <h2 className="mt-2 text-3xl font-semibold tracking-tight md:text-4xl">
-                  A complete, premium management stack.
-                </h2>
-                <p className="mt-3 max-w-3xl text-sm text-black/65">
-                  Typical scope includes tenant placement, rent collection,
-                  inspections, maintenance coordination, renewals support, and
-                  admin utilities assistance — tailored to your property and how
-                  hands-on you want to be.
-                </p>
-              </div>
-
-              <button
-                onClick={() => {
-                  setSelectedTile(null);
-                  setLeadOpen(true);
-                }}
-                className="mt-4 inline-flex items-center justify-center gap-2 rounded-2xl bg-black px-5 py-3 text-sm font-semibold text-white hover:bg-black/90 md:mt-0"
-              >
-                Get a quote <Icon name="arrow" />
-              </button>
-            </div>
-
-            <div className="mt-6 grid gap-4 md:grid-cols-3">
-              {SERVICE_TILES.map((t) => (
-                <button
-                  key={t.id}
-                  onClick={() => openService(t)}
-                  className="group relative overflow-hidden rounded-[28px] border border-black/10 bg-white text-left shadow-ks transition hover:-translate-y-1"
-                >
-                  <div className="absolute inset-0 bg-gradient-to-br from-black/[0.02] via-transparent to-[#C8A45D]/10" />
-                  <div className="relative p-6">
-                    <div className="flex items-center justify-between">
-                      <div className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-black/5 text-black/70 group-hover:bg-[#C8A45D] group-hover:text-black">
-                        <Icon name={t.icon} />
-                      </div>
-                      <div className="inline-flex items-center gap-2 rounded-full bg-black px-3 py-2 text-[12px] font-semibold text-white group-hover:bg-[#C8A45D] group-hover:text-black">
-                        View <Icon name="arrow" className="h-4 w-4" />
-                      </div>
-                    </div>
-
-                    <div className="mt-4 text-lg font-semibold text-black">
-                      {t.title}
-                    </div>
-                    <div className="mt-2 text-sm text-black/70">{t.desc}</div>
-
-                    <div className="mt-4 flex flex-wrap gap-2">
-                      {t.bullets.slice(0, 3).map((b) => (
-                        <span
-                          key={b}
-                          className="rounded-full border border-black/10 bg-white px-3 py-2 text-[11px] font-semibold text-black/70"
-                        >
-                          {b}
-                        </span>
-                      ))}
-                    </div>
-
-                    <div className="mt-5 text-[11px] text-black/45">
-                      Tap to see details — then request a quote.
-                    </div>
-                  </div>
-                </button>
-              ))}
-            </div>
+          {/* Discover communities button (hover gold like rest) */}
+          <div className="mt-6">
+            <Link
+              href="/discover-communities"
+              className="inline-flex items-center justify-center gap-2 rounded-2xl border border-black/10 bg-white px-5 py-3 text-sm font-semibold text-black/70 hover:bg-[#C8A45D] hover:text-black"
+            >
+              Discover communities <Icon name="arrow" />
+            </Link>
           </div>
-        </div>
-      </section>
 
-      {/* DASHBOARD / PORTAL */}
-      <section className="bg-white">
-        <div className="mx-auto max-w-6xl px-4 pb-12">
-          <div className="grid gap-4 md:grid-cols-[1.1fr_0.9fr]">
-            <div className="rounded-[28px] border border-black/10 bg-white p-7 shadow-sm">
+          {/* Stacked layout: calculator on top, what this means below */}
+          <div className="mt-6 grid gap-6">
+            {/* CALCULATOR */}
+            <div className="rounded-[28px] border border-black/10 bg-white p-6 shadow-ks">
               <div className="text-[11px] tracking-[0.22em] text-black/55">
-                OWNER PORTAL
+                CALCULATOR
               </div>
-              <h3 className="mt-2 text-2xl font-semibold tracking-tight md:text-3xl">
-                Dashboard + app access (premium experience).
-              </h3>
-              <p className="mt-3 text-sm text-black/65">
-                Once you’re onboarded, you get access to a clean dashboard (and
-                app view) so you can track the essentials: payments, contracts,
-                maintenance, and property insights — without chasing updates.
-              </p>
+              <div className="mt-2 text-2xl font-semibold text-black">
+                Deposit → estimated buying power
+              </div>
+              <div className="mt-2 text-sm text-black/65">
+                Enter your deposit in your local currency. We convert to AED
+                (live FX when available), then estimate what property value that
+                could unlock (illustrative).
+              </div>
 
-              <div className="mt-6 grid gap-3 md:grid-cols-2">
-                {[
-                  {
-                    title: "Payments",
-                    desc: "Rent status, receipts, owner statements.",
-                    icon: "chart" as const,
-                  },
-                  {
-                    title: "Contracts",
-                    desc: "Tenancy documents, renewals, key dates.",
-                    icon: "doc" as const,
-                  },
-                  {
-                    title: "Maintenance",
-                    desc: "Requests, approvals, completion updates.",
-                    icon: "wrench" as const,
-                  },
-                  {
-                    title: "Insights",
-                    desc: "High-level trends and practical prompts.",
-                    icon: "spark" as const,
-                  },
-                ].map((x) => (
-                  <div
-                    key={x.title}
-                    className="rounded-2xl border border-black/10 bg-white p-4 shadow-sm"
-                  >
-                    <div className="flex items-center gap-2">
-                      <span className="inline-flex h-9 w-9 items-center justify-center rounded-2xl bg-black/5 text-black/70">
-                        <Icon name={x.icon} />
-                      </span>
-                      <div className="text-sm font-semibold text-black">
-                        {x.title}
+              <div className="mt-5 grid gap-4">
+                <FieldShell
+                  label="Your deposit (local)"
+                  required
+                  hint="Choose your currency + type an amount"
+                >
+                  {/* ONLY VISUAL CHANGE: make currency selector stand out more */}
+                  <div className="grid gap-3 md:grid-cols-[0.6fr_1.4fr]">
+                    <div className="rounded-2xl border border-black/10 bg-white px-3 py-3 shadow-sm">
+                      <div className="text-[10px] tracking-[0.22em] text-black/45">
+                        CURRENCY
+                      </div>
+                      <div className="mt-1">
+                        <SelectInput
+                          value={currency}
+                          onChange={setCurrency}
+                          options={CURRENCIES}
+                          className="text-[15px] font-semibold text-black"
+                        />
                       </div>
                     </div>
-                    <div className="mt-2 text-sm text-black/65">{x.desc}</div>
-                  </div>
-                ))}
-              </div>
 
-              <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
-                <button
-                  onClick={() => {
-                    setSelectedTile(null);
-                    setLeadOpen(true);
-                  }}
-                  className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#C8A45D] px-5 py-3 text-sm font-semibold text-black hover:brightness-110"
+                    <div className="rounded-2xl border border-black/10 bg-white px-3 py-3 shadow-sm">
+                      <div className="text-[10px] tracking-[0.22em] text-black/45">
+                        AMOUNT
+                      </div>
+                      <div className="mt-1">
+                        <TextInput
+                          value={depositLocal}
+                          onChange={setDepositLocal}
+                          placeholder="e.g., 20000"
+                          inputMode="decimal"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </FieldShell>
+
+                <div className="rounded-2xl border border-black/10 bg-black/[0.03] p-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <div className="text-[11px] text-black/50">
+                        Deposit in AED (estimate)
+                      </div>
+                      <div className="mt-1 text-xl font-semibold text-black">
+                        {depositAED
+                          ? `${Math.round(depositAED).toLocaleString()} AED`
+                          : "—"}
+                      </div>
+                      <div className="mt-1 text-[11px] text-black/45">
+                        {currency === "AED"
+                          ? "No conversion needed."
+                          : fx
+                          ? `1 ${currency} = ${fx.toFixed(4)} AED`
+                          : "FX not available."}{" "}
+                        {fxNote ? `• ${fxNote}` : ""}
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={refreshFx}
+                      className="inline-flex items-center justify-center gap-2 rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm font-semibold text-black/70 hover:bg-black/5"
+                    >
+                      <Icon name="refresh" /> Refresh FX
+                    </button>
+                  </div>
+                  {fxLoading ? (
+                    <div className="mt-2 text-[11px] text-black/55">
+                      Fetching live FX…
+                    </div>
+                  ) : null}
+                </div>
+
+                <FieldShell
+                  label="Deposit percentage assumed (minimum 10%)"
+                  required
+                  hint="Illustrative only"
                 >
-                  Request access <Icon name="arrow" />
-                </button>
-                <a
-                  href={buildMailto({
-                    subject: "Keystne — Owner portal demo request",
-                    body: "Hi Keystne team,\n\nPlease share a quick demo / overview of the property management dashboard + app.\n\nName:\nPhone:\nProperty/community:\nTimeline:\n\nThank you",
-                  })}
-                  className="inline-flex items-center justify-center gap-2 rounded-2xl border border-black/10 bg-white px-5 py-3 text-sm font-semibold text-black/70 hover:bg-black/5"
+                  <div className="grid gap-3">
+                    <input
+                      type="range"
+                      min={10}
+                      max={60}
+                      value={pctSafe}
+                      onChange={(e) => setDepositPct(Number(e.target.value))}
+                      className="w-full"
+                    />
+                    <div className="flex items-center justify-between text-[12px] text-black/60">
+                      <span>10%</span>
+                      <span className="font-semibold text-black">
+                        {pctSafe}%
+                      </span>
+                      <span>60%</span>
+                    </div>
+                  </div>
+                </FieldShell>
+
+                <FieldShell
+                  label="Desired community"
+                  required
+                  hint="Affects estimate (illustrative factor)"
                 >
-                  Email demo request <Icon name="mail" />
-                </a>
+                  <SelectInput
+                    value={community}
+                    onChange={setCommunity}
+                    options={COMMUNITIES}
+                  />
+                </FieldShell>
+
+                <FieldShell
+                  label="Investment approach"
+                  required
+                  hint="Percentages only (no monetary promises)"
+                >
+                  <Segmented
+                    value={strategy}
+                    onChange={(v) => setStrategy(v as Strategy)}
+                    options={STRATEGIES}
+                  />
+                </FieldShell>
+
+                {/* RESULT */}
+                <div className="rounded-2xl border border-black/10 bg-black/[0.03] p-4">
+                  <div className="text-[11px] tracking-[0.22em] text-black/55">
+                    RESULT
+                  </div>
+
+                  <div className="mt-3 grid gap-3 md:grid-cols-2">
+                    <div className="rounded-2xl bg-white p-4 shadow-sm">
+                      <div className="text-[11px] text-black/50">
+                        Estimated buying power (property value)
+                      </div>
+                      <div className="mt-1 text-2xl font-semibold text-black">
+                        {estimatedPropertyValue
+                          ? `${Math.round(
+                              estimatedPropertyValue
+                            ).toLocaleString()} AED`
+                          : "—"}
+                      </div>
+                      <div className="mt-1 text-[11px] text-black/45">
+                        Uses deposit AED ÷ deposit% × community factor
+                        (illustrative).
+                      </div>
+                    </div>
+
+                    <div className="rounded-2xl bg-white p-4 shadow-sm">
+                      <div className="text-[11px] text-black/50">
+                        Strategy snapshot (illustrative)
+                      </div>
+                      <div className="mt-2 space-y-2 text-sm text-black/75">
+                        <div className="flex items-center justify-between">
+                          <span>Net yield</span>
+                          <span className="font-semibold text-black">
+                            {assumptions.netYield}% p.a.
+                          </span>
+                        </div>
+                        {strategy === "Off-plan flip" ? (
+                          <div className="flex items-center justify-between">
+                            <span>Annualised uplift</span>
+                            <span className="font-semibold text-black">
+                              {assumptions.netYield}%
+                            </span>
+                          </div>
+                        ) : (
+                          <div className="flex items-center justify-between">
+                            <span>Occupancy</span>
+                            <span className="font-semibold text-black">
+                              {assumptions.occupancy}%
+                            </span>
+                          </div>
+                        )}
+                        {strategy === "Short-term (Airbnb)" ? (
+                          <div className="flex items-center justify-between">
+                            <span>Peak-season uplift</span>
+                            <span className="font-semibold text-black">
+                              +{assumptions.seasonalityUplift}%
+                            </span>
+                          </div>
+                        ) : null}
+                        <div className="text-[11px] text-black/45">
+                          These are indicative ranges for explanation only — we
+                          validate with real comps.
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
+                    <button
+                      type="button"
+                      onClick={() => setShortlistOpen(true)}
+                      className="inline-flex items-center justify-center gap-2 rounded-2xl bg-black px-5 py-3 text-sm font-semibold text-white hover:bg-black/90"
+                    >
+                      Get a shortlist <Icon name="arrow" />
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
 
-            <div className="rounded-[28px] border border-black/10 bg-black p-7 text-white shadow-sm">
-              <div className="text-[11px] tracking-[0.22em] text-white/55">
-                THE PROMISE
+            {/* INTERPRETATION */}
+            <div className="rounded-[28px] border border-black/10 bg-white p-6 shadow-ks">
+              <div className="text-[11px] tracking-[0.22em] text-black/55">
+                WHAT THIS MEANS
               </div>
-              <div className="mt-2 text-2xl font-semibold tracking-tight">
-                Clean operations. Clear visibility.
-              </div>
-              <div className="mt-3 text-sm text-white/75">
-                We’re built for owners who want premium standards and fast
-                response — especially overseas owners or busy professionals.
+              <div className="mt-2 text-2xl font-semibold text-black">
+                Quick interpretation
               </div>
 
-              <div className="mt-6 space-y-3">
-                {[
-                  "One point of contact — no chasing multiple people.",
-                  "Fast triage on issues, with clear approvals where needed.",
-                  "Regular updates that are short, useful, and honest.",
-                  "A tidy document trail: contracts, key dates, status.",
-                ].map((x) => (
-                  <div
-                    key={x}
-                    className="flex items-start gap-3 rounded-2xl border border-white/10 bg-white/5 p-4"
-                  >
-                    <span className="mt-[2px] inline-flex h-6 w-6 items-center justify-center rounded-full bg-[#C8A45D] text-black">
+              <div className="mt-4 space-y-3">
+                <div className="rounded-2xl border border-black/10 bg-white px-4 py-4 shadow-sm">
+                  <div className="flex items-start gap-3">
+                    <span className="mt-[2px] inline-flex h-7 w-7 items-center justify-center rounded-full bg-black text-white">
                       <Icon name="check" className="h-4 w-4" />
                     </span>
-                    <div className="text-sm text-white/80">{x}</div>
+                    <div>
+                      <div className="text-sm font-semibold text-black">
+                        Deposit → buying power
+                      </div>
+                      <div className="mt-1 text-sm text-black/65">
+                        We convert your deposit to AED and estimate the property
+                        value it could unlock at your chosen deposit %.
+                        Community selection adjusts the estimate (illustrative).
+                      </div>
+                    </div>
                   </div>
-                ))}
-              </div>
+                </div>
 
-              <div className="mt-6">
-                <button
-                  onClick={() => {
-                    setSelectedTile(null);
-                    setLeadOpen(true);
-                  }}
-                  className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-white px-5 py-3 text-sm font-semibold text-black hover:bg-white/90"
-                >
-                  Start here (quote) <Icon name="arrow" />
-                </button>
+                <div className="rounded-2xl border border-black/10 bg-white px-4 py-4 shadow-sm">
+                  <div className="flex items-start gap-3">
+                    <span className="mt-[2px] inline-flex h-7 w-7 items-center justify-center rounded-full bg-[#C8A45D] text-black">
+                      <Icon name="check" className="h-4 w-4" />
+                    </span>
+                    <div>
+                      <div className="text-sm font-semibold text-black">
+                        Strategy options (finance-aware)
+                      </div>
+                      <div className="mt-1 text-sm text-black/65">
+                        Long-term is typically steadier. Short-term can
+                        outperform in peak tourism months but swings more.
+                        Mid-term sits between. Off-plan flips are
+                        timing-dependent. We’ll validate assumptions with comps.
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="rounded-2xl border border-black/10 bg-white px-4 py-4 shadow-sm">
+                  <div className="flex items-start gap-3">
+                    <span className="mt-[2px] inline-flex h-7 w-7 items-center justify-center rounded-full bg-black text-white">
+                      <Icon name="check" className="h-4 w-4" />
+                    </span>
+                    <div>
+                      <div className="text-sm font-semibold text-black">
+                        Next step (premium)
+                      </div>
+                      <div className="mt-1 text-sm text-black/65">
+                        We translate this into a real plan: shortlist,
+                        comparable listings, fees, vacancy assumptions,
+                        furnishing (if relevant), and a clear go / no-go view.
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-4 rounded-2xl border border-black/10 bg-white px-4 py-4 shadow-sm">
+                  <div className="text-sm text-black/65">
+                    Want us to validate this with real comparables for{" "}
+                    <span className="font-semibold text-black">
+                      {community}
+                    </span>
+                    ?
+                  </div>
+                </div>
+
+                <div className="mt-4 flex justify-end">
+                  <button
+                    type="button"
+                    onClick={() => setShortlistOpen(true)}
+                    className="inline-flex items-center justify-center gap-2 rounded-2xl bg-black px-5 py-3 text-sm font-semibold text-white hover:bg-black/90"
+                  >
+                    Get a shortlist <Icon name="arrow" />
+                  </button>
+                </div>
               </div>
             </div>
           </div>
 
-          {/* FOOTNOTE / DISCLAIMER */}
-          <div className="mt-6 text-[12px] text-black/55">
-            Disclaimer: We provide operational support and coordination for
-            property management. Final scope depends on the property, tenancy
-            status, building requirements, and current regulatory/utility
-            processes. We confirm assumptions on a call.
+          {/* Disclaimer outside the box (plain black on white) */}
+          <div className="mt-10 max-w-5xl">
+            <div className="text-[11px] tracking-[0.22em] text-black/55">
+              T&amp;Cs
+            </div>
+            <div className="mt-2 text-sm text-black/70">
+              <p className="mb-2">
+                <span className="font-semibold text-black">Disclaimer:</span>{" "}
+                This calculator is illustrative only. Keystne is not a financial
+                institution and does not provide financial advice. All estimates
+                depend on market conditions, unit type, building quality,
+                service charges, financing, and your personal profile.
+              </p>
+              <p className="mb-2">
+                FX rates are indicative and can change daily.
+                Yields/occupancy/uplift figures shown are general guidance used
+                to explain investment patterns — we validate assumptions with
+                live comparables during a call.
+              </p>
+            </div>
           </div>
         </div>
       </section>
@@ -1129,23 +956,80 @@ export default function PropertyManagementPage() {
       <KeystneFooter />
       <ContactDock />
 
-      {/* Modals */}
-      <ServiceModal
-        open={serviceModalOpen}
-        onClose={() => setServiceModalOpen(false)}
-        tile={selectedTile}
-        onStart={() => startLeadFromTile(selectedTile)}
-      />
-      <LeadModal
-        open={leadOpen}
-        onClose={() => setLeadOpen(false)}
-        presetServices={presetServices}
-        title={
-          selectedTile
-            ? `Request: ${selectedTile.title}`
-            : "Request property management"
-        }
-      />
+      {/* Shortlist modal (email to Arthur + Stuart via mailto) */}
+      <Modal
+        open={shortlistOpen}
+        onClose={() => setShortlistOpen(false)}
+        title="Get a shortlist"
+        subtitle="Share your details — we’ll respond with curated options (lead-gen)."
+        widthClass="max-w-2xl"
+      >
+        <div className="grid gap-4 md:grid-cols-2">
+          <FieldShell label="Full name" required error={emailErrors.name}>
+            <TextInput
+              value={capture.name}
+              onChange={(v) => setCapture((p) => ({ ...p, name: v }))}
+              placeholder="Your name"
+            />
+          </FieldShell>
+
+          <FieldShell
+            label="Phone (with country code)"
+            required
+            error={emailErrors.phone}
+          >
+            <TextInput
+              value={capture.phone}
+              onChange={(v) => setCapture((p) => ({ ...p, phone: v }))}
+              placeholder="+44… / +971…"
+            />
+          </FieldShell>
+
+          <FieldShell label="Email" required error={emailErrors.email}>
+            <TextInput
+              value={capture.email}
+              onChange={(v) => setCapture((p) => ({ ...p, email: v }))}
+              placeholder="name@email.com"
+            />
+          </FieldShell>
+
+          <FieldShell label="Confirm email" required error={emailErrors.email2}>
+            <TextInput
+              value={capture.email2}
+              onChange={(v) => setCapture((p) => ({ ...p, email2: v }))}
+              placeholder="Repeat email"
+            />
+          </FieldShell>
+
+          <div className="md:col-span-2 rounded-2xl border border-black/10 bg-black/[0.03] p-4 text-sm text-black/70">
+            We’ll use your inputs to send a first-pass shortlist — then validate
+            with real comps on a quick call.
+          </div>
+
+          <div className="md:col-span-2 flex items-center justify-end gap-3">
+            <button
+              type="button"
+              onClick={() => setShortlistOpen(false)}
+              className="rounded-2xl border border-black/10 bg-white px-4 py-3 text-sm font-semibold text-black/70 hover:bg-black/5"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={openShortlistEmail}
+              disabled={!canSend}
+              className={[
+                "inline-flex items-center justify-center gap-2 rounded-2xl px-5 py-3 text-sm font-semibold transition",
+                canSend
+                  ? "bg-[#C8A45D] text-black hover:brightness-110"
+                  : "bg-black/10 text-black/35 cursor-not-allowed",
+              ].join(" ")}
+            >
+              Open email <Icon name="arrow" />
+            </button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

@@ -618,7 +618,7 @@ export default function InvestmentsPage() {
           {/* Discover communities button (hover gold like rest) */}
           <div className="mt-6">
             <Link
-              href="/discover-communities"
+              href="/communities"
               className="inline-flex items-center justify-center gap-2 rounded-2xl border border-black/10 bg-white px-5 py-3 text-sm font-semibold text-black/70 hover:bg-[#C8A45D] hover:text-black"
             >
               Discover communities <Icon name="arrow" />
