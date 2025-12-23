@@ -70,7 +70,7 @@ export default function ContactPage() {
         </div>
 
         <div className="mt-8 text-sm text-white/55">
-          WeChat: <span className="text-ksOffWhite">{CONTACT.wechatHint}</span>
+          WeChat: <span className="text-ksOffWhite">{CONTACT.wechatText}</span>
         </div>
       </main>
       <KeystneFooter />
