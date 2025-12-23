@@ -9,15 +9,15 @@ export const CONTACT = {
 };
 
 export const HOME_VIDEOS = {
-  hero: "https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4",
+  hero: "https://www.youtube.com/watch?v=AuSm1jj-nuE",
   concierge:
-    "https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4",
+    "https://player.vimeo.com/external/487015782.hd.mp4?s=5303a874674efcff8ff4ec8ebf6ed187ab66d578&profile_id=175",
   investments:
-    "https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4",
+    "https://player.vimeo.com/external/487015782.hd.mp4?s=5303a874674efcff8ff4ec8ebf6ed187ab66d578&profile_id=175",
   longterm:
-    "https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4",
+    "https://player.vimeo.com/external/487015782.hd.mp4?s=5303a874674efcff8ff4ec8ebf6ed187ab66d578&profile_id=175",
   management:
-    "https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4",
+    "https://player.vimeo.com/external/487015782.hd.mp4?s=5303a874674efcff8ff4ec8ebf6ed187ab66d578&profile_id=175",
 };
 
 // Keep these exported so other pages never break builds.
