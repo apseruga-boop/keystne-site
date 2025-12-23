@@ -1282,7 +1282,7 @@ export default function ConciergePage() {
       <section className="relative min-h-[70vh] overflow-hidden">
         <video
           className="absolute inset-0 h-full w-full object-cover opacity-85"
-          src={HOME_VIDEOS.hero}
+          src={HOME_VIDEOS.concierge}
           autoPlay
           muted
           loop

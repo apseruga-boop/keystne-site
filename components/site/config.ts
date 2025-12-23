@@ -9,13 +9,13 @@ export const CONTACT = {
 };
 
 export const HOME_VIDEOS = {
-  hero: "https://www.youtube.com/shorts/30tJKZgiAmM?autoplay=1&mute=1&loop=1&playlist=AuSm1jj-nuE&controls=0&rel=0&modestbranding=1&playsinline=1",
+  hero: "https://www.youtube.com/embed/AuSm1jj-nuE?autoplay=1&mute=1&loop=1&playlist=AuSm1jj-nuE&controls=0&rel=0&modestbranding=1&playsinline=1",
   concierge:
-    "https://www.youtube.com/embed/JuoXoYLivZ4?autoplay=1&mute=1&loop=1&playlist=JuoXoYLivZ4&controls=0&rel=0&modestbranding=1&playsinline=1",
+    "https://www.youtube.com/embed/dddJVdIlLSI?autoplay=1&mute=1&loop=1&playlist=dddJVdIlLSI&controls=0&rel=0&modestbranding=1&playsinline=1",
   investments:
-    "https://www.youtube.com/shorts/sSpDuQnVrHc?autoplay=1&mute=1&loop=1&playlist=HEpRHVehWZ8&controls=0&rel=0&modestbranding=1&playsinline=1",
+    "https://www.youtube.com/embed/tg2fntIVi6Q?autoplay=1&mute=1&loop=1&playlist=tg2fntIVi6Q&controls=0&rel=0&modestbranding=1&playsinline=1",
   longterm:
-    "https://www.youtube.com/shorts/AoaS60l1Rg4?autoplay=1&mute=1&loop=1&playlist=Y2ifOxFa6C0&controls=0&rel=0&modestbranding=1&playsinline=1",
+    "https://www.youtube.com/embed/sBzJS1SAIpo?autoplay=1&mute=1&loop=1&playlist=sBzJS1SAIpo&controls=0&rel=0&modestbranding=1&playsinline=1",
   management:
     "https://www.youtube.com/embed/kA9CNESB8Fw?autoplay=1&mute=1&loop=1&playlist=kA9CNESB8Fw&controls=0&rel=0&modestbranding=1&playsinline=1",
 };
