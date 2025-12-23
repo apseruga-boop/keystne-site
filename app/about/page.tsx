@@ -267,31 +267,6 @@ function TextInput({
   );
 }
 
-function SelectInput({
-  value,
-  onChange,
-  options,
-}: {
-  value: string;
-  onChange: (v: string) => void;
-  options: string[];
-}) {
-  return (
-    <select
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      className="w-full bg-transparent text-sm text-black outline-none"
-    >
-      <option value="">Select…</option>
-      {options.map((o) => (
-        <option key={o} value={o}>
-          {o}
-        </option>
-      ))}
-    </select>
-  );
-}
-
 function Segmented({
   value,
   onChange,
@@ -395,7 +370,6 @@ function ContactDock({ onContact }: { onContact: () => void }) {
 
 /* =========================
    Meeting slots (simple client-side)
-   NOTE: This is lead-gen scheduling preference.
 ========================= */
 function generateSlots(daysAhead = 10) {
   const slots: Date[] = [];
@@ -405,12 +379,10 @@ function generateSlots(daysAhead = 10) {
     const day = new Date(now);
     day.setDate(now.getDate() + d);
 
-    // hours: 10:00, 12:00, 14:00, 16:00, 18:00
     const hours = [10, 12, 14, 16, 18];
     for (const h of hours) {
       const slot = new Date(day);
       slot.setHours(h, 0, 0, 0);
-      // Skip slots in the past
       if (slot.getTime() > now.getTime() + 30 * 60 * 1000) slots.push(slot);
     }
   }
@@ -519,7 +491,7 @@ type ContactForm = {
   phone: string;
   preferredChannel: string;
   notes: string;
-  meetingChoice: string; // formatted slot or ""
+  meetingChoice: string;
 };
 
 function ContactModal({
@@ -608,7 +580,6 @@ function ContactModal({
       widthClass="max-w-5xl"
     >
       <div className="grid gap-6 md:grid-cols-[1fr_1.2fr]">
-        {/* Left: service + mode */}
         <div className="space-y-5">
           <div className="rounded-[28px] border border-black/10 bg-white p-5 shadow-sm">
             <div className="text-[11px] tracking-[0.22em] text-black/55">
@@ -734,7 +705,6 @@ function ContactModal({
           </div>
         </div>
 
-        {/* Right: form + action */}
         <div className="space-y-5">
           <div className="rounded-[28px] border border-black/10 bg-white p-5 shadow-sm">
             <div className="text-[11px] tracking-[0.22em] text-black/55">
@@ -843,7 +813,6 @@ function ContactModal({
             </div>
           </div>
 
-          {/* Action area */}
           <div className="rounded-[28px] border border-black/10 bg-white p-5 shadow-sm">
             <div className="text-[11px] tracking-[0.22em] text-black/55">
               NEXT
@@ -860,7 +829,7 @@ function ContactModal({
                   if (mode === "call") window.location.href = CONTACT.phoneTel;
                   else if (mode === "whatsapp")
                     window.open(CONTACT.whatsappLink, "_blank", "noreferrer");
-                  else openEmail(); // email + meeting both generate email lead
+                  else openEmail();
                 }}
                 disabled={!canProceed}
                 className={`inline-flex items-center justify-center gap-2 rounded-2xl px-5 py-4 text-sm font-semibold transition ${
@@ -910,13 +879,9 @@ export default function AboutPage() {
 
   return (
     <div className="min-h-screen bg-white text-black">
-      {/* NAV WRAPPER (white pill) */}
-      <div className="fixed left-0 right-0 top-0 z-50">
-        <div className="mx-auto max-w-6xl px-4 pt-4">
-          <div className="rounded-[28px] border border-black/10 bg-white/95 shadow-ks backdrop-blur">
-            <KeystneNav />
-          </div>
-        </div>
+      {/* NAV (consistent with other pages) */}
+      <div className="fixed left-0 right-0 top-0 z-50 bg-white text-black">
+        <KeystneNav />
       </div>
 
       {/* HERO */}
@@ -1018,45 +983,6 @@ export default function AboutPage() {
                 </div>
               </div>
             </div>
-
-            <div className="rounded-[28px] border border-black/10 bg-black p-7 text-white shadow-sm">
-              <div className="text-[11px] tracking-[0.22em] text-white/55">
-                FOCUS
-              </div>
-              <div className="mt-2 text-2xl font-semibold tracking-tight">
-                Lead generation with real value.
-              </div>
-              <div className="mt-3 text-sm text-white/75">
-                Everything on the site is designed to help you choose a path
-                quickly — then we move fast on the details.
-              </div>
-
-              <div className="mt-6 space-y-3">
-                {[
-                  "Fast response: we aim to reply quickly via your preferred channel.",
-                  "Clean information: fewer forms, better questions, better outcomes.",
-                  "Premium experience: clear steps, minimal friction.",
-                ].map((x) => (
-                  <div
-                    key={x}
-                    className="flex items-start gap-3 rounded-2xl border border-white/10 bg-white/5 p-4"
-                  >
-                    <span className="mt-[2px] inline-flex h-6 w-6 items-center justify-center rounded-full bg-[#C8A45D] text-black">
-                      <Icon name="check" className="h-4 w-4" />
-                    </span>
-                    <div className="text-sm text-white/80">{x}</div>
-                  </div>
-                ))}
-              </div>
-
-              <button
-                onClick={() => setContactOpen(true)}
-                className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-white px-5 py-3 text-sm font-semibold text-black hover:bg-white/90"
-                type="button"
-              >
-                Contact us <Icon name="arrow" />
-              </button>
-            </div>
           </div>
         </div>
       </section>
@@ -1134,10 +1060,8 @@ export default function AboutPage() {
 
       <KeystneFooter />
 
-      {/* Floating contact dock */}
       <ContactDock onContact={() => setContactOpen(true)} />
 
-      {/* Contact modal */}
       <ContactModal open={contactOpen} onClose={() => setContactOpen(false)} />
     </div>
   );
