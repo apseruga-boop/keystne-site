@@ -4,7 +4,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import KeystneNav from "../../components/site/KeystneNav";
 import KeystneFooter from "../../components/site/KeystneFooter";
 import ContactDock from "../../components/concierge/ContactDock";
-import { CONTACT, HOME_VIDEOS } from "../../components/site/config";
+import { CONTACT } from "../../components/site/config";
 
 /**
  * CONCIERGE PAGE — UPDATED (as per latest notes)
@@ -20,6 +20,10 @@ import { CONTACT, HOME_VIDEOS } from "../../components/site/config";
  * ADDITIONAL (Consistency-only):
  * 3) Use shared white ContactDock component (consistent across pages)
  *    → removed the inline ContactDock() function in this file.
+ *
+ * LATEST CHANGE (per your instruction):
+ * 4) Remove the hero video only (and close the space it created).
+ *    No other changes.
  */
 
 type ConciergeFlow = "relocation" | "viewing" | null;
@@ -1279,26 +1283,17 @@ export default function ConciergePage() {
         <KeystneNav />
       </div>
 
-      <section className="relative min-h-[70vh] overflow-hidden">
-        <video
-          className="absolute inset-0 h-full w-full object-cover opacity-85"
-          src={HOME_VIDEOS.concierge}
-          autoPlay
-          muted
-          loop
-          playsInline
-        />
-        <div className="absolute inset-0 bg-gradient-to-b from-black/65 via-black/25 to-white" />
-
-        <div className="relative mx-auto max-w-6xl px-4 pb-6 pt-28">
+      {/* HERO (VIDEO REMOVED ONLY + height no longer forces a big empty block) */}
+      <section className="relative overflow-hidden bg-white">
+        <div className="relative mx-auto max-w-6xl px-4 pb-0 pt-28">
           <div className="max-w-3xl">
-            <div className="text-[11px] tracking-[0.22em] text-white/80">
+            <div className="text-[11px] tracking-[0.22em] text-black/55">
               CONCIERGE
             </div>
-            <h1 className="mt-3 text-4xl font-semibold tracking-tight text-white md:text-6xl">
+            <h1 className="mt-3 text-4xl font-semibold tracking-tight text-black md:text-6xl">
               Concierge, done properly.
             </h1>
-            <p className="mt-5 text-base text-white/85 md:text-lg">
+            <p className="mt-5 text-base text-black/65 md:text-lg">
               Two ways we support you: relocate seamlessly, or fly in for a
               curated viewing trip and invest with clarity.
             </p>
