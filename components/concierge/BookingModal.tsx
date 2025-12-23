@@ -4,7 +4,7 @@ import React, { useMemo, useState } from "react";
 import Modal from "../site/Modal";
 import { buildMailto } from "../site/mailto";
 import { CONTACT } from "../site/config";
-import { IconCalendar, IconArrowRight } from "../site/Icons";
+import { IconArrowRight } from "../site/Icons";
 
 export default function BookingModal({
   open,
@@ -92,7 +92,7 @@ export default function BookingModal({
               "disabled:opacity-50 disabled:cursor-not-allowed",
             ].join(" ")}
           >
-            Confirm booking <IconCalendar className="h-4 w-4" />
+            Confirm booking <IconArrowRight className="h-4 w-4" />
           </button>
         </div>
 
