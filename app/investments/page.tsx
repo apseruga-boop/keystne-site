@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, useRef } from "react";
 import Link from "next/link";
 import KeystneNav from "../../components/site/KeystneNav";
 import KeystneFooter from "../../components/site/KeystneFooter";
@@ -8,16 +8,9 @@ import { CONTACT } from "../../components/site/config";
 
 /** Investments — Invest with clarity (UPDATED per Arthur)
  * Changes made ONLY:
- * 1) Add “Discover communities” button just above the calculator
- * 2) Allow user to input deposit in local currency → convert to AED (live FX when available)
- * 3) Use location pick to influence estimated buying power (illustrative factor)
- * 4) Remove “Strategy” monetary values → show percentages only
- * 5) Add more strategy options (still lead-gen + finance-aware)
- * 6) Remove the long-term projection graph section entirely
- * 7) NAV wrapper forced white bg + black text (top bar)
- * 8) Calculator stacked on top, "What this means" below (no side-by-side)
- * 9) Discover communities hover gold (like rest)
- * Everything else kept as-is style-wise.
+ * 1) Hide top nav when user starts scrolling down (re-appears when scrolling up)
+ * 2) Make currency selector more visually prominent (bigger + less “calculator” feel)
+ * Everything else kept as-is.
  */
 
 function isValidEmail(email: string) {
@@ -232,16 +225,21 @@ function SelectInput({
   value,
   onChange,
   options,
+  className = "",
 }: {
   value: string;
   onChange: (v: string) => void;
   options: string[];
+  className?: string;
 }) {
   return (
     <select
       value={value}
       onChange={(e) => onChange(e.target.value)}
-      className="w-full bg-transparent text-sm text-black outline-none"
+      className={[
+        "w-full bg-transparent text-sm text-black outline-none",
+        className,
+      ].join(" ")}
     >
       <option value="">Select…</option>
       {options.map((o) => (
@@ -428,6 +426,25 @@ type ShortlistCapture = {
 };
 
 export default function InvestmentsPage() {
+  // NAV hide on scroll down / show on scroll up (disappear as soon as scrolling starts)
+  const [navHidden, setNavHidden] = useState(false);
+  const lastY = useRef(0);
+
+  useEffect(() => {
+    const onScroll = () => {
+      const y = window.scrollY || 0;
+      const delta = y - lastY.current;
+
+      if (y > 0 && delta > 0) setNavHidden(true);
+      if (delta < 0) setNavHidden(false);
+
+      lastY.current = y;
+    };
+    lastY.current = window.scrollY || 0;
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
   // FX
   const [currency, setCurrency] = useState<string>("USD");
   const [depositLocal, setDepositLocal] = useState<string>("20000");
@@ -575,7 +592,12 @@ export default function InvestmentsPage() {
   return (
     <div className="min-h-screen bg-white text-black">
       {/* NAV (forced white top bar background + black text) */}
-      <div className="fixed left-0 right-0 top-0 z-50 bg-white text-black">
+      <div
+        className={[
+          "fixed left-0 right-0 top-0 z-50 bg-white text-black transition-all duration-300",
+          navHidden ? "-translate-y-28 opacity-0 pointer-events-none" : "",
+        ].join(" ")}
+      >
         <KeystneNav />
       </div>
 
@@ -623,20 +645,37 @@ export default function InvestmentsPage() {
                 <FieldShell
                   label="Your deposit (local)"
                   required
-                  hint="You can type any amount"
+                  hint="Choose your currency + type an amount"
                 >
-                  <div className="grid gap-3 md:grid-cols-[0.7fr_1.3fr]">
-                    <SelectInput
-                      value={currency}
-                      onChange={setCurrency}
-                      options={CURRENCIES}
-                    />
-                    <TextInput
-                      value={depositLocal}
-                      onChange={setDepositLocal}
-                      placeholder="e.g., 20000"
-                      inputMode="decimal"
-                    />
+                  {/* ONLY VISUAL CHANGE: make currency selector stand out more */}
+                  <div className="grid gap-3 md:grid-cols-[0.6fr_1.4fr]">
+                    <div className="rounded-2xl border border-black/10 bg-white px-3 py-3 shadow-sm">
+                      <div className="text-[10px] tracking-[0.22em] text-black/45">
+                        CURRENCY
+                      </div>
+                      <div className="mt-1">
+                        <SelectInput
+                          value={currency}
+                          onChange={setCurrency}
+                          options={CURRENCIES}
+                          className="text-[15px] font-semibold text-black"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="rounded-2xl border border-black/10 bg-white px-3 py-3 shadow-sm">
+                      <div className="text-[10px] tracking-[0.22em] text-black/45">
+                        AMOUNT
+                      </div>
+                      <div className="mt-1">
+                        <TextInput
+                          value={depositLocal}
+                          onChange={setDepositLocal}
+                          placeholder="e.g., 20000"
+                          inputMode="decimal"
+                        />
+                      </div>
+                    </div>
                   </div>
                 </FieldShell>
 
