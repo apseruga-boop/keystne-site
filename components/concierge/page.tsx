@@ -1291,7 +1291,7 @@ function Wizard({
             <FieldShell label="Preferred contact window" required>
               <Segmented
                 value={callWhen}
-                onChange={setCallWhen}
+                onChange={(v) => setCallWhen(v as CallWhen)}
                 options={["ASAP", "1 month", "2 months", "6 months"]}
               />
             </FieldShell>
