@@ -19,7 +19,7 @@ export default function KeystneNav() {
 
     // ✅ ONLY CHANGE: this must match your folder name: app/Property Management/page.tsx
     // Next will encode the space, so the route is /Property%20Management
-    { label: "Property Management", href: "/Property%20Management" },
+    { label: "Property Management", href: "/property-management" },
 
     { label: "About", href: "/about" },
   ];
